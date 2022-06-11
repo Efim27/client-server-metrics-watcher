@@ -12,16 +12,14 @@ import (
 	"metrics/internal/server/storage"
 )
 
-type Metrics struct {
-	ID    string   `json:"id" valid:"required"`
-	MType string   `json:"type" valid:"required,in(counter|gauge)"`
-	Delta *int64   `json:"delta,omitempty"`
-	Value *float64 `json:"value,omitempty"`
-}
-
 //UpdateStatJsonPost update stat via json
 func UpdateStatJsonPost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
-	var OneMetric Metrics
+	var OneMetric struct {
+		ID    string   `json:"id" valid:"required"`
+		MType string   `json:"type" valid:"required,in(counter|gauge)"`
+		Delta *int64   `json:"delta,omitempty"`
+		Value *float64 `json:"value,omitempty"`
+	}
 
 	err := json.NewDecoder(request.Body).Decode(&OneMetric)
 	if err != nil {
@@ -35,8 +33,8 @@ func UpdateStatJsonPost(rw http.ResponseWriter, request *http.Request, memStatsS
 		return
 	}
 
-	if (OneMetric.MType == "counter") {
-		if (OneMetric.Delta == nil) {
+	if OneMetric.MType == "counter" {
+		if OneMetric.Delta == nil {
 			http.Error(rw, "delta is empty", http.StatusBadRequest)
 			return
 		}
@@ -44,8 +42,8 @@ func UpdateStatJsonPost(rw http.ResponseWriter, request *http.Request, memStatsS
 		err = memStatsStorage.UpdateCounterValue(OneMetric.ID, *OneMetric.Delta)
 	}
 
-	if (OneMetric.MType == "gauge") {
-		if (OneMetric.Value == nil) {
+	if OneMetric.MType == "gauge" {
+		if OneMetric.Value == nil {
 			http.Error(rw, "value is empty", http.StatusBadRequest)
 			return
 		}
@@ -68,6 +66,7 @@ func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, memStatsStor
 	statName := chi.URLParam(request, "statName")
 	statValue := chi.URLParam(request, "statValue")
 	statValueInt, err := strconv.ParseFloat(statValue, 64)
+
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
 		rw.Write([]byte("Bad request"))
@@ -136,6 +135,40 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, memStatsSto
 	htmlPage := fmt.Sprintf(htmlTemplate, keyValuesHTML)
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte(htmlPage))
+}
+
+//JSONStatValue get stat value via json
+func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+	var InputMetricsJson struct {
+		ID    string `json:"id" valid:"required"`
+		MType string `json:"type" valid:"required,in(counter|gauge)"`
+	}
+
+	err := json.NewDecoder(request.Body).Decode(&InputMetricsJson)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err = govalidator.ValidateStruct(InputMetricsJson)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	statValue, err := memStatsStorage.ReadValue(InputMetricsJson.ID)
+	if err != nil {
+		http.Error(rw, "Unknown statName", http.StatusNotFound)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(rw).Encode(statValue)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
 }
 
 func PrintStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {

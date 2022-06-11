@@ -31,11 +31,17 @@ func newRouter(memStatsStorage storage.MemStatsMemoryRepo) chi.Router {
 		handlers.PrintStatsValues(writer, request, memStatsStorage)
 	})
 
+	//json handler
+	router.Post("/value", func(writer http.ResponseWriter, request *http.Request) {
+		handlers.JSONStatValue(writer, request, memStatsStorage)
+	})
+
 	router.Get("/value/{statType}/{statName}", func(writer http.ResponseWriter, request *http.Request) {
 		handlers.PrintStatValue(writer, request, memStatsStorage)
 	})
 
 	router.Route("/update", func(router chi.Router) {
+		//json handler
 		router.Post("/", func(writer http.ResponseWriter, request *http.Request) {
 			handlers.UpdateStatJsonPost(writer, request, memStatsStorage)
 		})
