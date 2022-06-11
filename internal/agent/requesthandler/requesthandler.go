@@ -58,10 +58,10 @@ func oneStatUploadJSON(httpClient *resty.Client, statType string, statName strin
 		metricValue, err = strconv.ParseFloat(statValue, 64)
 		OneMetrics.Value = metricValue
 	default:
-		return errors.New("Unknow statType")
+		return errors.New("unknow statType")
 	}
 	if err != nil {
-		return errors.New("Invalid statValue")
+		return errors.New("invalid statValue")
 	}
 
 	statJSON, err := json.Marshal(OneMetrics)
@@ -76,7 +76,7 @@ func oneStatUploadJSON(httpClient *resty.Client, statType string, statName strin
 			"host": config.ConfigServerHost,
 			"port": strconv.Itoa(config.ConfigServerPort),
 		}).
-		Post("http://{host}:{port}/update")
+		Post("http://{host}:{port}/update/")
 
 	if err != nil {
 		return err

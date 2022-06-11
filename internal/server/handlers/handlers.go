@@ -12,8 +12,8 @@ import (
 	"metrics/internal/server/storage"
 )
 
-//UpdateStatJsonPost update stat via json
-func UpdateStatJsonPost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+//UpdateStatJSONPost update stat via json
+func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
 	var OneMetric struct {
 		ID    string   `json:"id" valid:"required"`
 		MType string   `json:"type" valid:"required,in(counter|gauge)"`
@@ -139,24 +139,24 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, memStatsSto
 
 //JSONStatValue get stat value via json
 func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
-	var InputMetricsJson struct {
+	var InputMetricsJSON struct {
 		ID    string `json:"id" valid:"required"`
 		MType string `json:"type" valid:"required,in(counter|gauge)"`
 	}
 
-	err := json.NewDecoder(request.Body).Decode(&InputMetricsJson)
+	err := json.NewDecoder(request.Body).Decode(&InputMetricsJSON)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	_, err = govalidator.ValidateStruct(InputMetricsJson)
+	_, err = govalidator.ValidateStruct(InputMetricsJSON)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	statValue, err := memStatsStorage.ReadValue(InputMetricsJson.ID)
+	statValue, err := memStatsStorage.ReadValue(InputMetricsJSON.ID)
 	if err != nil {
 		http.Error(rw, "Unknown statName", http.StatusNotFound)
 		return
