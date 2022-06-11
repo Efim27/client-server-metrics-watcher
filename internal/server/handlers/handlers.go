@@ -1,14 +1,68 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/go-chi/chi"
 	"metrics/internal/server/storage"
 )
+
+type Metrics struct {
+	ID    string   `json:"id" valid:"required"`
+	MType string   `json:"type" valid:"required,in(counter|gauge)"`
+	Delta *int64   `json:"delta,omitempty"`
+	Value *float64 `json:"value,omitempty"`
+}
+
+//UpdateStatJsonPost update stat via json
+func UpdateStatJsonPost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+	var OneMetric Metrics
+
+	err := json.NewDecoder(request.Body).Decode(&OneMetric)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err = govalidator.ValidateStruct(OneMetric)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if (OneMetric.MType == "counter") {
+		if (OneMetric.Delta == nil) {
+			http.Error(rw, "delta is empty", http.StatusBadRequest)
+			return
+		}
+
+		err = memStatsStorage.UpdateCounterValue(OneMetric.ID, *OneMetric.Delta)
+	}
+
+	if (OneMetric.MType == "gauge") {
+		if (OneMetric.Value == nil) {
+			http.Error(rw, "value is empty", http.StatusBadRequest)
+			return
+		}
+
+		err = memStatsStorage.UpdateGaugeValue(OneMetric.ID, *OneMetric.Value)
+	}
+
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte(err.Error()))
+		return
+	}
+
+	log.Println("Update metric via JSON")
+	rw.WriteHeader(http.StatusOK)
+	rw.Write([]byte("Ok"))
+}
 
 func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
 	statName := chi.URLParam(request, "statName")

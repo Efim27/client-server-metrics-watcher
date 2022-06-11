@@ -36,6 +36,10 @@ func newRouter(memStatsStorage storage.MemStatsMemoryRepo) chi.Router {
 	})
 
 	router.Route("/update", func(router chi.Router) {
+		router.Post("/", func(writer http.ResponseWriter, request *http.Request) {
+			handlers.UpdateStatJsonPost(writer, request, memStatsStorage)
+		})
+
 		router.Post("/gauge/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
 			handlers.UpdateGaugePost(writer, request, memStatsStorage)
 		})
