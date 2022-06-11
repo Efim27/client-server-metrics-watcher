@@ -1,6 +1,7 @@
 package requesthandler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -35,6 +36,58 @@ func oneStatUpload(httpClient *resty.Client, statType string, statName string, s
 	return nil
 }
 
+func oneStatUploadJSON(httpClient *resty.Client, statType string, statName string, statValue string) error {
+	OneMetrics := struct {
+		ID    string  `json:"id"`
+		MType string  `json:"type"`
+		Delta int64   `json:"delta"`
+		Value float64 `json:"value"`
+	}{
+		ID:    statName,
+		MType: statType,
+	}
+
+	var err error
+	switch OneMetrics.MType {
+	case "counter":
+		var metricValue int64
+		metricValue, err = strconv.ParseInt(statValue, 10, 64)
+		OneMetrics.Delta = metricValue
+	case "gauge":
+		var metricValue float64
+		metricValue, err = strconv.ParseFloat(statValue, 64)
+		OneMetrics.Value = metricValue
+	default:
+		return errors.New("Unknow statType")
+	}
+	if err != nil {
+		return errors.New("Invalid statValue")
+	}
+
+	statJSON, err := json.Marshal(OneMetrics)
+	if err != nil {
+		return err
+	}
+
+	resp, err := httpClient.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(string(statJSON)).
+		SetPathParams(map[string]string{
+			"host": config.ConfigServerHost,
+			"port": strconv.Itoa(config.ConfigServerPort),
+		}).
+		Post("http://{host}:{port}/update")
+
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode() != 200 {
+		return fmt.Errorf("HTTP Status: %v (not 200)", resp.StatusCode())
+	}
+
+	return nil
+}
+
 func MemoryStatsUpload(httpClient *resty.Client, memoryStats statsreader.MemoryStatsDump) error {
 	reflectMemoryStats := reflect.ValueOf(memoryStats)
 	typeOfMemoryStats := reflectMemoryStats.Type()
@@ -46,7 +99,7 @@ func MemoryStatsUpload(httpClient *resty.Client, memoryStats statsreader.MemoryS
 		statType := strings.Split(typeOfMemoryStats.Field(i).Type.String(), ".")[1]
 
 		errorGroup.Go(func() error {
-			return oneStatUpload(httpClient, statType, statName, statValue)
+			return oneStatUploadJSON(httpClient, statType, statName, statValue)
 		})
 	}
 
