@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
+	github.com/caarlos0/env/v6 v6.9.3 // indirect
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/go-chi/chi v1.5.4 // indirect
 	github.com/go-resty/resty/v2 v2.7.0 // indirect

@@ -25,9 +25,9 @@ func NewHTTPClient() *AppHTTP {
 	client := resty.New()
 
 	client.
-		SetRetryCount(config.ConfigClientRetryCount).
-		SetRetryWaitTime(config.ConfigClientRetryWaitTime).
-		SetRetryMaxWaitTime(config.ConfigClientRetryMaxWaitTime)
+		SetRetryCount(config.AppConfig.HTTPClientConnection.RetryCount).
+		SetRetryWaitTime(config.AppConfig.HTTPClientConnection.RetryWaitTime).
+		SetRetryMaxWaitTime(config.AppConfig.HTTPClientConnection.RetryMaxWaitTime)
 
 	app.client = client
 	return &app
@@ -40,8 +40,8 @@ func (app *AppHTTP) Run() {
 	app.startTime = time.Now()
 	app.isRun = true
 
-	tickerStatisticsRefresh := time.NewTicker(config.ConfigPollInterval * time.Second)
-	tickerStatisticsUpload := time.NewTicker(config.ConfigReportInterval * time.Second)
+	tickerStatisticsRefresh := time.NewTicker(config.AppConfig.PollInterval)
+	tickerStatisticsUpload := time.NewTicker(config.AppConfig.ReportInterval)
 
 	for app.isRun {
 		select {
