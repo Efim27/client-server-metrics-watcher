@@ -9,12 +9,12 @@ import (
 
 type Config struct {
 	HTTPClientConnection struct {
-		RetryCount       int           `env:"RETRYCONNCOUNT" envDefault:"1"`
-		RetryWaitTime    time.Duration `env:"RETRYCONNWAITTIME" envDefault:"10s"`
-		RetryMaxWaitTime time.Duration `env:"RETRYCONNMAXWAITTIME" envDefault:"90s"`
+		RetryCount       int           `env:"RETRY_CONN_COUNT" envDefault:"2"`
+		RetryWaitTime    time.Duration `env:"RETRY_CONN_WAIT_TIME" envDefault:"10s"`
+		RetryMaxWaitTime time.Duration `env:"RETRY_CONN_MAX_WAIT_TIME" envDefault:"90s"`
 	}
-	PollInterval   time.Duration `env:"POLLINTERVAL" envDefault:"2s"`
-	ReportInterval time.Duration `env:"REPORTINTERVAL" envDefault:"10s"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
 	ServerAddr     string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"` //addr:port
 }
 
