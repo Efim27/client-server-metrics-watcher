@@ -12,14 +12,16 @@ import (
 	"metrics/internal/server/storage"
 )
 
+type Metric struct {
+	ID    string   `json:"id" valid:"required"`
+	MType string   `json:"type" valid:"required,in(counter|gauge)"`
+	Delta *int64   `json:"delta,omitempty"`
+	Value *float64 `json:"value,omitempty"`
+}
+
 //UpdateStatJSONPost update stat via json
 func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
-	var OneMetric struct {
-		ID    string   `json:"id" valid:"required"`
-		MType string   `json:"type" valid:"required,in(counter|gauge)"`
-		Delta *int64   `json:"delta,omitempty"`
-		Value *float64 `json:"value,omitempty"`
-	}
+	var OneMetric Metric
 
 	err := json.NewDecoder(request.Body).Decode(&OneMetric)
 	if err != nil {
@@ -162,9 +164,28 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 		return
 	}
 
+	answerJSON := Metric{
+		ID:    InputMetricsJSON.ID,
+		MType: InputMetricsJSON.MType,
+	}
+
+	if answerJSON.MType == "counter" {
+		var metricValue int64
+		metricValue, err = strconv.ParseInt(statValue, 10, 64)
+		answerJSON.Delta = &metricValue
+	} else {
+		var metricValue float64
+		metricValue, err = strconv.ParseFloat(statValue, 64)
+		answerJSON.Value = &metricValue
+	}
+	if err != nil {
+		http.Error(rw, "Server error", http.StatusInternalServerError)
+		return
+	}
+
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(rw).Encode(statValue)
+	err = json.NewEncoder(rw).Encode(answerJSON)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
