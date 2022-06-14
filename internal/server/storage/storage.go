@@ -1,10 +1,14 @@
 package storage
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
+
+	"metrics/internal/server/config"
 )
 
 type Gauge float64
@@ -16,6 +20,7 @@ type Storager interface {
 	Read(key string) (string, error)
 	Delete(key string) (string, bool)
 	GetSchemaDump() map[string]string
+	Close() error
 }
 
 // MemoryRepo структура
@@ -24,11 +29,19 @@ type MemoryRepo struct {
 	*sync.RWMutex
 }
 
-func NewMemoryRepo() *MemoryRepo {
+func NewMemoryRepo() (*MemoryRepo, error) {
+	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+	if err != nil {
+		return nil, err
+	}
+
+	repoEncoderJSON := json.NewEncoder(file)
+	repoEncoderJSON.SetIndent("", "  ")
+
 	return &MemoryRepo{
 		db:      make(map[string]string),
 		RWMutex: &sync.RWMutex{},
-	}
+	}, nil
 }
 
 func (m *MemoryRepo) Len() int {
@@ -69,56 +82,41 @@ func (m MemoryRepo) GetSchemaDump() map[string]string {
 	return m.db
 }
 
+func (m *MemoryRepo) Close() error {
+	return nil
+}
+
 //MemStatsMemoryRepo - репо для приходящей статистики
 type MemStatsMemoryRepo struct {
 	storage Storager
 }
 
-//Создание MemStatsMemoryRepo с дефолтными значениями
 func NewMemStatsMemoryRepo() MemStatsMemoryRepo {
 	var memStatsStorage MemStatsMemoryRepo
-	memStatsStorage.storage = NewMemoryRepo()
+	var err error
+	memStatsStorage.storage, err = NewMemoryRepo()
+	if err != nil {
+		panic("MemoryRepo init error")
+	}
 
-	memStatsStorage.storage.Write("Alloc", "0")
-	memStatsStorage.storage.Write("BuckHashSys", "0")
-	memStatsStorage.storage.Write("Frees", "0")
-	memStatsStorage.storage.Write("GCCPUFraction", "0")
-	memStatsStorage.storage.Write("GCSys", "0")
-
-	memStatsStorage.storage.Write("HeapAlloc", "0")
-	memStatsStorage.storage.Write("HeapIdle", "0")
-	memStatsStorage.storage.Write("HeapInuse", "0")
-	memStatsStorage.storage.Write("HeapObjects", "0")
-	memStatsStorage.storage.Write("HeapReleased", "0")
-
-	memStatsStorage.storage.Write("HeapSys", "0")
-	memStatsStorage.storage.Write("LastGC", "0")
-	memStatsStorage.storage.Write("Lookups", "0")
-	memStatsStorage.storage.Write("MCacheInuse", "0")
-	memStatsStorage.storage.Write("MCacheSys", "0")
-
-	memStatsStorage.storage.Write("MSpanInuse", "0")
-	memStatsStorage.storage.Write("MSpanSys", "0")
-	memStatsStorage.storage.Write("Mallocs", "0")
-	memStatsStorage.storage.Write("NextGC", "0")
-	memStatsStorage.storage.Write("NumForcedGC", "0")
-
-	memStatsStorage.storage.Write("NumGC", "0")
-	memStatsStorage.storage.Write("OtherSys", "0")
-	memStatsStorage.storage.Write("PauseTotalNs", "0")
-	memStatsStorage.storage.Write("StackInuse", "0")
-	memStatsStorage.storage.Write("StackSys", "0")
-
-	memStatsStorage.storage.Write("Sys", "0")
-	memStatsStorage.storage.Write("TotalAlloc", "0")
-	memStatsStorage.storage.Write("PollCount", "0")
-	memStatsStorage.storage.Write("RandomValue", "0")
+	if config.AppConfig.Store.Restore {
+		memStatsStorage.LoadFromFile()
+	}
 
 	return memStatsStorage
 }
 
 func (memStatsStorage MemStatsMemoryRepo) UpdateGaugeValue(key string, value float64) error {
-	return memStatsStorage.storage.Write(key, fmt.Sprintf("%v", value))
+	err := memStatsStorage.storage.Write(key, fmt.Sprintf("%v", value))
+	if err != nil {
+		return err
+	}
+
+	if config.AppConfig.Store.Interval == "O" {
+		return memStatsStorage.UploadToFile()
+	}
+
+	return nil
 }
 
 func (memStatsStorage MemStatsMemoryRepo) UpdateCounterValue(key string, value int64) error {
@@ -137,6 +135,30 @@ func (memStatsStorage MemStatsMemoryRepo) UpdateCounterValue(key string, value i
 	newValue := fmt.Sprintf("%v", oldValueInt+value)
 	memStatsStorage.storage.Write(key, newValue)
 
+	if config.AppConfig.Store.Interval == "O" {
+		return memStatsStorage.UploadToFile()
+	}
+
+	return nil
+}
+
+func (memStatsStorage MemStatsMemoryRepo) UploadToFile() error {
+	if config.AppConfig.Store.File == "" {
+		return nil
+	}
+
+	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+	allStates := memStatsStorage.GetDBSchema()
+	json.NewEncoder(file).Encode(allStates)
+
+	return nil
+}
+
+func (memStatsStorage MemStatsMemoryRepo) LoadFromFile() error {
 	return nil
 }
 
@@ -146,4 +168,8 @@ func (memStatsStorage MemStatsMemoryRepo) ReadValue(key string) (string, error) 
 
 func (memStatsStorage MemStatsMemoryRepo) GetDBSchema() map[string]string {
 	return memStatsStorage.storage.GetSchemaDump()
+}
+
+func (memStatsStorage MemStatsMemoryRepo) Close() error {
+	return memStatsStorage.storage.Close()
 }
