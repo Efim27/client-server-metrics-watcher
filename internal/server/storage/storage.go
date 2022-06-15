@@ -99,10 +99,6 @@ func NewMemStatsMemoryRepo() MemStatsMemoryRepo {
 		panic("MemoryRepo init error")
 	}
 
-	if config.AppConfig.Store.Restore {
-		memStatsStorage.InitFromFile()
-	}
-
 	if config.AppConfig.Store.Interval != syncUploadSymbol {
 		memStatsStorage.IterativeUploadToFile()
 	}

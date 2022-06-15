@@ -17,7 +17,7 @@ import (
 func oneStatUpload(httpClient *resty.Client, statType string, statName string, statValue string) error {
 	resp, err := httpClient.R().
 		SetPathParams(map[string]string{
-			"add":   config.AppConfig.ServerAddr,
+			"addr":  config.AppConfig.ServerAddr,
 			"type":  statType,
 			"name":  statName,
 			"value": statValue,

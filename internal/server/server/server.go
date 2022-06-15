@@ -62,6 +62,9 @@ func newRouter(memStatsStorage storage.MemStatsMemoryRepo) chi.Router {
 func (server *Server) Run() {
 	memStatsStorage := storage.NewMemStatsMemoryRepo()
 	defer memStatsStorage.Close()
+	if config.AppConfig.Store.Restore {
+		memStatsStorage.InitFromFile()
+	}
 	server.chiRouter = newRouter(memStatsStorage)
 
 	log.Fatal(http.ListenAndServe(config.AppConfig.ServerAddr, server.chiRouter))
