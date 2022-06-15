@@ -88,13 +88,15 @@ func (m *MemoryRepo) Close() error {
 
 //MemStatsMemoryRepo - репо для приходящей статистики
 type MemStatsMemoryRepo struct {
-	storage Storager
+	storage     Storager
+	uploadMutex *sync.RWMutex
 }
 
 func NewMemStatsMemoryRepo() MemStatsMemoryRepo {
 	var memStatsStorage MemStatsMemoryRepo
 	var err error
 	memStatsStorage.storage, err = NewMemoryRepo()
+	memStatsStorage.uploadMutex = &sync.RWMutex{}
 	if err != nil {
 		panic("MemoryRepo init error")
 	}
@@ -143,6 +145,8 @@ func (memStatsStorage MemStatsMemoryRepo) UpdateCounterValue(key string, value i
 }
 
 func (memStatsStorage MemStatsMemoryRepo) UploadToFile() error {
+	memStatsStorage.uploadMutex.Lock()
+	defer memStatsStorage.uploadMutex.Unlock()
 	if config.AppConfig.Store.File == "" {
 		return nil
 	}
@@ -159,6 +163,9 @@ func (memStatsStorage MemStatsMemoryRepo) UploadToFile() error {
 }
 
 func (memStatsStorage MemStatsMemoryRepo) LoadFromFile() error {
+	memStatsStorage.uploadMutex.RLock()
+	defer memStatsStorage.uploadMutex.RUnlock()
+
 	return nil
 }
 
