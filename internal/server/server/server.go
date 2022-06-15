@@ -67,7 +67,7 @@ func (server *Server) Run() {
 		memStatsStorage.InitFromFile()
 	}
 	fmt.Println("InitFromFile:")
-	fmt.Println(memStatsStorage)
+	fmt.Println(memStatsStorage.GetDBSchema())
 	server.chiRouter = newRouter(memStatsStorage)
 
 	log.Fatal(http.ListenAndServe(config.AppConfig.ServerAddr, server.chiRouter))

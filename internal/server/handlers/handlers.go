@@ -161,7 +161,7 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 	statValue, err := memStatsStorage.ReadValue(InputMetricsJSON.ID)
 	if err != nil {
 		log.Println(InputMetricsJSON.ID)
-		log.Println(memStatsStorage)
+		log.Println(memStatsStorage.GetDBSchema())
 		http.Error(rw, "Unknown statName", http.StatusNotFound)
 		return
 	}

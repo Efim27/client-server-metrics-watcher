@@ -179,7 +179,7 @@ func (memStatsStorage MemStatsMemoryRepo) IterativeUploadToFile() error {
 	tickerUpload := time.NewTicker(time.Duration(intervalSeconds) * time.Second)
 
 	go func() {
-		for _ = range tickerUpload.C {
+		for range tickerUpload.C {
 			memStatsStorage.UploadToFile()
 		}
 	}()
