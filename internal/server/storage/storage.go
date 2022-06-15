@@ -159,10 +159,10 @@ func (memStatsStorage MemStatsMemoryRepo) UploadToFile() error {
 	}
 
 	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
-	defer file.Close()
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 	allStates := memStatsStorage.GetDBSchema()
 	//log.Println(allStates)
 	json.NewEncoder(file).Encode(allStates)
@@ -179,11 +179,8 @@ func (memStatsStorage MemStatsMemoryRepo) IterativeUploadToFile() error {
 	tickerUpload := time.NewTicker(time.Duration(intervalSeconds) * time.Second)
 
 	go func() {
-		for {
-			select {
-			case <-tickerUpload.C:
-				memStatsStorage.UploadToFile()
-			}
+		for _ = range tickerUpload.C {
+			memStatsStorage.UploadToFile()
 		}
 	}()
 
@@ -192,10 +189,10 @@ func (memStatsStorage MemStatsMemoryRepo) IterativeUploadToFile() error {
 
 func (memStatsStorage MemStatsMemoryRepo) InitFromFile() {
 	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDONLY|os.O_CREATE, 0777)
-	defer file.Close()
 	if err != nil {
 		panic("Error while restoring StateValues")
 	}
+	defer file.Close()
 
 	var stateValues map[string]string
 	json.NewDecoder(file).Decode(&stateValues)
