@@ -7,12 +7,15 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"metrics/internal/server/config"
 )
 
 type Gauge float64
 type Counter int64
+
+const syncUploadSymbol = "O"
 
 type Storager interface {
 	Len() int
@@ -100,6 +103,10 @@ func NewMemStatsMemoryRepo() MemStatsMemoryRepo {
 		memStatsStorage.InitFromFile()
 	}
 
+	if config.AppConfig.Store.Interval != syncUploadSymbol {
+		memStatsStorage.IterativeUploadToFile()
+	}
+
 	return memStatsStorage
 }
 
@@ -112,7 +119,7 @@ func (memStatsStorage MemStatsMemoryRepo) UpdateGaugeValue(key string, value flo
 		return err
 	}
 
-	if config.AppConfig.Store.Interval == "O" {
+	if config.AppConfig.Store.Interval == syncUploadSymbol {
 		return memStatsStorage.UploadToFile()
 	}
 
@@ -137,7 +144,7 @@ func (memStatsStorage MemStatsMemoryRepo) UpdateCounterValue(key string, value i
 	memStatsStorage.storage.Write(key, newValue)
 	memStatsStorage.uploadMutex.Unlock()
 
-	if config.AppConfig.Store.Interval == "O" {
+	if config.AppConfig.Store.Interval == syncUploadSymbol {
 		return memStatsStorage.UploadToFile()
 	}
 
@@ -163,6 +170,26 @@ func (memStatsStorage MemStatsMemoryRepo) UploadToFile() error {
 	allStates := memStatsStorage.GetDBSchema()
 	//log.Println(allStates)
 	json.NewEncoder(file).Encode(allStates)
+
+	return nil
+}
+
+func (memStatsStorage MemStatsMemoryRepo) IterativeUploadToFile() error {
+	intervalSeconds, err := strconv.Atoi(config.AppConfig.Store.Interval)
+	if err != nil {
+		return err
+	}
+
+	tickerUpload := time.NewTicker(time.Duration(intervalSeconds) * time.Second)
+
+	go func() {
+		for {
+			select {
+			case <-tickerUpload.C:
+				memStatsStorage.UploadToFile()
+			}
+		}
+	}()
 
 	return nil
 }
