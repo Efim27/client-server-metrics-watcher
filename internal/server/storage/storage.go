@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
 	"sync"
@@ -188,9 +190,11 @@ func (memStatsStorage MemStatsMemoryRepo) IterativeUploadToFile() error {
 }
 
 func (memStatsStorage MemStatsMemoryRepo) InitFromFile() {
-	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDONLY|os.O_CREATE, 0777)
+	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDONLY|os.O_EXCL, 0777)
+	b, _ := ioutil.ReadAll(file)
+	log.Println(string(b))
 	if err != nil {
-		panic("Error while restoring StateValues")
+		panic(err)
 	}
 	defer file.Close()
 
