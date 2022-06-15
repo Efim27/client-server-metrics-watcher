@@ -30,14 +30,6 @@ type MemoryRepo struct {
 }
 
 func NewMemoryRepo() (*MemoryRepo, error) {
-	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
-	if err != nil {
-		return nil, err
-	}
-
-	repoEncoderJSON := json.NewEncoder(file)
-	repoEncoderJSON.SetIndent("", "  ")
-
 	return &MemoryRepo{
 		db:      make(map[string]string),
 		RWMutex: &sync.RWMutex{},
@@ -79,6 +71,8 @@ func (m MemoryRepo) Read(key string) (string, error) {
 }
 
 func (m MemoryRepo) GetSchemaDump() map[string]string {
+	m.RLock()
+	defer m.RUnlock()
 	return m.db
 }
 
@@ -88,28 +82,32 @@ func (m *MemoryRepo) Close() error {
 
 //MemStatsMemoryRepo - репо для приходящей статистики
 type MemStatsMemoryRepo struct {
-	storage     Storager
 	uploadMutex *sync.RWMutex
+	storage     Storager
 }
 
 func NewMemStatsMemoryRepo() MemStatsMemoryRepo {
 	var memStatsStorage MemStatsMemoryRepo
 	var err error
-	memStatsStorage.storage, err = NewMemoryRepo()
+
 	memStatsStorage.uploadMutex = &sync.RWMutex{}
+	memStatsStorage.storage, err = NewMemoryRepo()
 	if err != nil {
 		panic("MemoryRepo init error")
 	}
 
 	if config.AppConfig.Store.Restore {
-		memStatsStorage.LoadFromFile()
+		memStatsStorage.InitFromFile()
 	}
 
 	return memStatsStorage
 }
 
 func (memStatsStorage MemStatsMemoryRepo) UpdateGaugeValue(key string, value float64) error {
+	memStatsStorage.uploadMutex.Lock()
 	err := memStatsStorage.storage.Write(key, fmt.Sprintf("%v", value))
+	memStatsStorage.uploadMutex.Unlock()
+
 	if err != nil {
 		return err
 	}
@@ -135,13 +133,19 @@ func (memStatsStorage MemStatsMemoryRepo) UpdateCounterValue(key string, value i
 	}
 
 	newValue := fmt.Sprintf("%v", oldValueInt+value)
+	memStatsStorage.uploadMutex.Lock()
 	memStatsStorage.storage.Write(key, newValue)
+	memStatsStorage.uploadMutex.Unlock()
 
 	if config.AppConfig.Store.Interval == "O" {
 		return memStatsStorage.UploadToFile()
 	}
 
 	return nil
+}
+
+func (memStatsStorage MemStatsMemoryRepo) ReadValue(key string) (string, error) {
+	return memStatsStorage.storage.Read(key)
 }
 
 func (memStatsStorage MemStatsMemoryRepo) UploadToFile() error {
@@ -157,20 +161,28 @@ func (memStatsStorage MemStatsMemoryRepo) UploadToFile() error {
 		return err
 	}
 	allStates := memStatsStorage.GetDBSchema()
+	//log.Println(allStates)
 	json.NewEncoder(file).Encode(allStates)
 
 	return nil
 }
 
-func (memStatsStorage MemStatsMemoryRepo) LoadFromFile() error {
-	memStatsStorage.uploadMutex.RLock()
-	defer memStatsStorage.uploadMutex.RUnlock()
+func (memStatsStorage MemStatsMemoryRepo) InitFromFile() {
+	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDONLY|os.O_CREATE, 0777)
+	defer file.Close()
+	if err != nil {
+		panic("Error while restoring StateValues")
+	}
 
-	return nil
+	var stateValues map[string]string
+	json.NewDecoder(file).Decode(&stateValues)
+	memStatsStorage.InitStateValues(stateValues)
 }
 
-func (memStatsStorage MemStatsMemoryRepo) ReadValue(key string) (string, error) {
-	return memStatsStorage.storage.Read(key)
+func (memStatsStorage MemStatsMemoryRepo) InitStateValues(DBSchema map[string]string) {
+	for stateKey, stateValue := range DBSchema {
+		memStatsStorage.storage.Write(stateKey, stateValue)
+	}
 }
 
 func (memStatsStorage MemStatsMemoryRepo) GetDBSchema() map[string]string {
