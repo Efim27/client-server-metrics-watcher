@@ -28,27 +28,13 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, memStatsS
 		return
 	}
 
-	if OneMetric.MType == "counter" {
-		if OneMetric.Delta == nil {
-			http.Error(rw, "delta is empty", http.StatusBadRequest)
-			return
-		}
-
-		err = memStatsStorage.UpdateCounterValue(OneMetric.ID, *OneMetric.Delta)
-	}
-
-	if OneMetric.MType == "gauge" {
-		if OneMetric.Value == nil {
-			http.Error(rw, "value is empty", http.StatusBadRequest)
-			return
-		}
-
-		err = memStatsStorage.UpdateGaugeValue(OneMetric.ID, *OneMetric.Value)
-	}
-
+	err = memStatsStorage.Update(OneMetric.ID, &storage.MetricValue{
+		MType: OneMetric.MType,
+		Value: OneMetric.Value,
+		Delta: OneMetric.Delta,
+	})
 	if err != nil {
-		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(err.Error()))
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 

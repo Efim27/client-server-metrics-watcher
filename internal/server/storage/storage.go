@@ -124,8 +124,14 @@ func (memStatsStorage MemStatsMemoryRepo) Update(key string, newMetricValue *Met
 
 	switch newMetricValue.MType {
 	case "gauge":
+		if newMetricValue.Value == nil {
+			return errors.New("MetricValue Value is empty")
+		}
 		return memStatsStorage.updateGaugeValue(key, newMetricValue)
 	case "counter":
+		if newMetricValue.Delta == nil {
+			return errors.New("MetricValue Delta is empty")
+		}
 		return memStatsStorage.updateCounterValue(key, newMetricValue)
 	}
 
