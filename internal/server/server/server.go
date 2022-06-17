@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -66,8 +65,6 @@ func (server *Server) Run() {
 	if config.AppConfig.Store.Restore {
 		memStatsStorage.InitFromFile()
 	}
-	fmt.Println("InitFromFile:")
-	fmt.Println(memStatsStorage.GetDBSchema())
 	server.chiRouter = newRouter(memStatsStorage)
 
 	log.Fatal(http.ListenAndServe(config.AppConfig.ServerAddr, server.chiRouter))

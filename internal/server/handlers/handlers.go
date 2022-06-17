@@ -12,16 +12,9 @@ import (
 	"metrics/internal/server/storage"
 )
 
-type Metric struct {
-	ID    string   `json:"id" valid:"required"`
-	MType string   `json:"type" valid:"required,in(counter|gauge)"`
-	Delta *int64   `json:"delta,omitempty"`
-	Value *float64 `json:"value,omitempty"`
-}
-
 //UpdateStatJSONPost update stat via json
 func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
-	var OneMetric Metric
+	var OneMetric storage.Metric
 
 	err := json.NewDecoder(request.Body).Decode(&OneMetric)
 	if err != nil {
@@ -166,7 +159,7 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 		return
 	}
 
-	answerJSON := Metric{
+	answerJSON := storage.Metric{
 		ID:    InputMetricsJSON.ID,
 		MType: InputMetricsJSON.MType,
 	}
