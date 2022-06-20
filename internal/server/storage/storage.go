@@ -13,7 +13,7 @@ import (
 	"metrics/internal/server/config"
 )
 
-const syncUploadSymbol = "O"
+const syncUploadSymbol = "0"
 
 type MetricValue struct {
 	MType string   `json:"type" valid:"required,in(counter|gauge)"`
