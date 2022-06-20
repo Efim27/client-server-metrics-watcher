@@ -8,7 +8,7 @@ import (
 
 func TestMemoryRepoRW(t *testing.T) {
 	memoryRepo, err := NewMemoryRepo()
-	require.NoError(t, err)
+	require.Error(t, err)
 
 	usernameExpect := "Efim"
 	memoryRepo.Write("username", usernameExpect)
@@ -20,7 +20,7 @@ func TestMemoryRepoRW(t *testing.T) {
 
 func TestMemoryRepoReadEmpty(t *testing.T) {
 	memoryRepo, err := NewMemoryRepo()
-	require.NoError(t, err)
+	require.Error(t, err)
 	_, err = memoryRepo.Read("username")
 	require.Error(t, err)
 }
