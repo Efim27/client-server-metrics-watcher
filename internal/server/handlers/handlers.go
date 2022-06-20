@@ -28,7 +28,7 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, memStatsS
 		return
 	}
 
-	err = memStatsStorage.Update(OneMetric.ID, &storage.MetricValue{
+	err = memStatsStorage.Update(OneMetric.ID, storage.MetricValue{
 		MType: OneMetric.MType,
 		Value: OneMetric.Value,
 		Delta: OneMetric.Delta,
@@ -54,7 +54,7 @@ func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, memStatsStor
 		return
 	}
 
-	err = memStatsStorage.Update(statName, &storage.MetricValue{
+	err = memStatsStorage.Update(statName, storage.MetricValue{
 		MType: "gauge",
 		Value: &statValueFloat,
 	})
@@ -80,7 +80,7 @@ func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, memStatsSt
 		return
 	}
 
-	err = memStatsStorage.Update(statName, &storage.MetricValue{
+	err = memStatsStorage.Update(statName, storage.MetricValue{
 		MType: "counter",
 		Delta: &statValueInt,
 	})
@@ -151,7 +151,7 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 
 	answerJSON := storage.Metric{
 		ID:    InputMetricsJSON.ID,
-		MType: InputMetricsJSON.MType,
+		MType: statValue.MType,
 		Delta: statValue.Delta,
 		Value: statValue.Value,
 	}

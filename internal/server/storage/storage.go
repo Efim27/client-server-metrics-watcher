@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"sync"
@@ -40,22 +41,22 @@ func (metric MetricValue) GetStringValue() string {
 
 type MetricStorager interface {
 	Len() int
-	Write(key string, value *MetricValue) error
-	Read(key string) (*MetricValue, error)
-	Delete(key string) (*MetricValue, bool)
-	GetSchemaDump() map[string]*MetricValue
+	Write(key string, value MetricValue) error
+	Read(key string) (MetricValue, error)
+	Delete(key string) (MetricValue, bool)
+	GetSchemaDump() map[string]MetricValue
 	Close() error
 }
 
 // MemoryRepo структура
 type MemoryRepo struct {
-	db map[string]*MetricValue
+	db map[string]MetricValue
 	*sync.RWMutex
 }
 
 func NewMemoryRepo() (*MemoryRepo, error) {
 	return &MemoryRepo{
-		db:      make(map[string]*MetricValue),
+		db:      make(map[string]MetricValue),
 		RWMutex: &sync.RWMutex{},
 	}, nil
 }
@@ -66,14 +67,14 @@ func (m *MemoryRepo) Len() int {
 	return len(m.db)
 }
 
-func (m MemoryRepo) Write(key string, value *MetricValue) error {
+func (m MemoryRepo) Write(key string, value MetricValue) error {
 	m.Lock()
 	defer m.Unlock()
 	m.db[key] = value
 	return nil
 }
 
-func (m *MemoryRepo) Delete(key string) (*MetricValue, bool) {
+func (m *MemoryRepo) Delete(key string) (MetricValue, bool) {
 	m.Lock()
 	defer m.Unlock()
 	oldValue, ok := m.db[key]
@@ -83,18 +84,18 @@ func (m *MemoryRepo) Delete(key string) (*MetricValue, bool) {
 	return oldValue, ok
 }
 
-func (m MemoryRepo) Read(key string) (*MetricValue, error) {
+func (m MemoryRepo) Read(key string) (MetricValue, error) {
 	m.RLock()
 	defer m.RUnlock()
 	value, err := m.db[key]
 	if !err {
-		return nil, errors.New("Значение по ключу не найдено, ключ: " + key)
+		return MetricValue{}, errors.New("Значение по ключу не найдено, ключ: " + key)
 	}
 
 	return value, nil
 }
 
-func (m MemoryRepo) GetSchemaDump() map[string]*MetricValue {
+func (m MemoryRepo) GetSchemaDump() map[string]MetricValue {
 	m.RLock()
 	defer m.RUnlock()
 	return m.db
@@ -132,29 +133,32 @@ func NewMemStatsMemoryRepo() MemStatsMemoryRepo {
 	return memStatsStorage
 }
 
-func (memStatsStorage MemStatsMemoryRepo) Update(key string, newMetricValue *MetricValue) error {
-
+func (memStatsStorage MemStatsMemoryRepo) Update(key string, newMetricValue MetricValue) error {
 	switch newMetricValue.MType {
 	case "gauge":
+		log.Println("update gauge")
 		if newMetricValue.Value == nil {
-			return errors.New("MetricValue Value is empty")
+			return errors.New("Metric Value is empty")
 		}
 		newMetricValue.Delta = nil
 
 		return memStatsStorage.updateGaugeValue(key, newMetricValue)
 	case "counter":
+		log.Println("update counter")
 		if newMetricValue.Delta == nil {
-			return errors.New("MetricValue Delta is empty")
+			return errors.New("Metric Delta is empty")
 		}
 		newMetricValue.Value = nil
 
 		return memStatsStorage.updateCounterValue(key, newMetricValue)
+	default:
+		return errors.New("Metric type is not defined")
 	}
 
 	return nil
 }
 
-func (memStatsStorage MemStatsMemoryRepo) updateGaugeValue(key string, newMetricValue *MetricValue) error {
+func (memStatsStorage MemStatsMemoryRepo) updateGaugeValue(key string, newMetricValue MetricValue) error {
 	memStatsStorage.uploadMutex.Lock()
 	err := memStatsStorage.gaugeStorage.Write(key, newMetricValue)
 	memStatsStorage.uploadMutex.Unlock()
@@ -170,12 +174,12 @@ func (memStatsStorage MemStatsMemoryRepo) updateGaugeValue(key string, newMetric
 	return nil
 }
 
-func (memStatsStorage MemStatsMemoryRepo) updateCounterValue(key string, newMetricValue *MetricValue) error {
+func (memStatsStorage MemStatsMemoryRepo) updateCounterValue(key string, newMetricValue MetricValue) error {
 	//Чтение старого значения
 	oldMetricValue, err := memStatsStorage.ReadValue(key, "counter")
 	if err != nil {
 		var delta int64 = 0
-		oldMetricValue = &MetricValue{
+		oldMetricValue = MetricValue{
 			Delta: &delta,
 		}
 	}
@@ -194,14 +198,18 @@ func (memStatsStorage MemStatsMemoryRepo) updateCounterValue(key string, newMetr
 	return nil
 }
 
-func (memStatsStorage MemStatsMemoryRepo) ReadValue(key string, metricType string) (*MetricValue, error) {
+func (memStatsStorage MemStatsMemoryRepo) ReadValue(key string, metricType string) (MetricValue, error) {
+	log.Println("Read storage:")
+	log.Println(memStatsStorage.gaugeStorage.GetSchemaDump())
+	log.Println(memStatsStorage.counterStorage.GetSchemaDump())
+
 	switch metricType {
 	case "gauge":
 		return memStatsStorage.gaugeStorage.Read(key)
 	case "counter":
 		return memStatsStorage.counterStorage.Read(key)
 	default:
-		return nil, errors.New("metricType not found")
+		return MetricValue{}, errors.New("metricType not found")
 	}
 }
 
@@ -241,26 +249,30 @@ func (memStatsStorage MemStatsMemoryRepo) IterativeUploadToFile() error {
 }
 
 func (memStatsStorage MemStatsMemoryRepo) InitFromFile() {
-	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDONLY|os.O_EXCL, 0777)
+	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
 		panic(err.Error())
 	}
 	defer file.Close()
 
-	var stateValues map[string]*MetricValue
+	var stateValues map[string]MetricValue
 	json.NewDecoder(file).Decode(&stateValues)
 
 	memStatsStorage.InitStateValues(stateValues)
 }
 
-func (memStatsStorage MemStatsMemoryRepo) InitStateValues(DBSchema map[string]*MetricValue) {
+func (memStatsStorage MemStatsMemoryRepo) InitStateValues(DBSchema map[string]MetricValue) {
 	for metricKey, metricValue := range DBSchema {
 		memStatsStorage.Update(metricKey, metricValue)
 	}
 }
 
-func (memStatsStorage MemStatsMemoryRepo) GetAllMetrics() map[string]*MetricValue {
-	allMetrics := memStatsStorage.gaugeStorage.GetSchemaDump()
+func (memStatsStorage MemStatsMemoryRepo) GetAllMetrics() map[string]MetricValue {
+	allMetrics := make(map[string]MetricValue)
+
+	for metricKey, metricValue := range memStatsStorage.gaugeStorage.GetSchemaDump() {
+		allMetrics[metricKey] = metricValue
+	}
 
 	for metricKey, metricValue := range memStatsStorage.counterStorage.GetSchemaDump() {
 		allMetrics[metricKey] = metricValue
