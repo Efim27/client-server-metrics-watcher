@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 )
@@ -9,9 +10,9 @@ import (
 type Config struct {
 	ServerAddr string `env:"ADDRESS" envDefault:"127.0.0.1:8080"` //addr:port
 	Store      struct {
-		Interval string `env:"STORE_INTERVAL" envDefault:"300"`
-		File     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-		Restore  bool   `env:"RESTORE" envDefault:"true"`
+		Interval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
+		File     string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+		Restore  bool          `env:"RESTORE" envDefault:"true"`
 	}
 }
 

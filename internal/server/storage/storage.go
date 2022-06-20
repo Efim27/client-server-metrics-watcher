@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 
 	"metrics/internal/server/config"
 )
 
-const syncUploadSymbol = "0"
+const syncUploadSymbol = time.Duration(0)
 
 type MetricValue struct {
 	MType string   `json:"type" valid:"required,in(counter|gauge)"`
@@ -230,12 +229,7 @@ func (memStatsStorage MemStatsMemoryRepo) UploadToFile() error {
 }
 
 func (memStatsStorage MemStatsMemoryRepo) IterativeUploadToFile() error {
-	intervalSeconds, err := strconv.Atoi(config.AppConfig.Store.Interval)
-	if err != nil {
-		return err
-	}
-
-	tickerUpload := time.NewTicker(time.Duration(intervalSeconds) * time.Second)
+	tickerUpload := time.NewTicker(config.AppConfig.Store.Interval)
 
 	go func() {
 		for range tickerUpload.C {
