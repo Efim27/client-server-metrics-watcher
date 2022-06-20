@@ -3,8 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"log"
+	"fmt"
 	"os"
 	"strconv"
 	"sync"
@@ -22,8 +21,21 @@ type MetricValue struct {
 }
 
 type Metric struct {
-	ID string `json:"id" valid:"required"`
-	MetricValue
+	ID    string   `json:"id" valid:"required"`
+	MType string   `json:"type" valid:"required,in(counter|gauge)"`
+	Delta *int64   `json:"delta,omitempty"`
+	Value *float64 `json:"value,omitempty"`
+}
+
+func (metric MetricValue) GetStringValue() string {
+	switch metric.MType {
+	case "gauge":
+		return fmt.Sprintf("%v", *metric.Value)
+	case "counter":
+		return fmt.Sprintf("%v", *metric.Delta)
+	default:
+		return ""
+	}
 }
 
 type MetricStorager interface {
@@ -158,7 +170,10 @@ func (memStatsStorage MemStatsMemoryRepo) updateCounterValue(key string, newMetr
 	//Чтение старого значения
 	oldMetricValue, err := memStatsStorage.ReadValue(key, "counter")
 	if err != nil {
-		oldMetricValue = &MetricValue{}
+		var delta int64 = 0
+		oldMetricValue = &MetricValue{
+			Delta: &delta,
+		}
 	}
 
 	newValue := *oldMetricValue.Delta + *newMetricValue.Delta
@@ -223,8 +238,6 @@ func (memStatsStorage MemStatsMemoryRepo) IterativeUploadToFile() error {
 
 func (memStatsStorage MemStatsMemoryRepo) InitFromFile() {
 	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDONLY|os.O_EXCL, 0777)
-	b, _ := ioutil.ReadAll(file)
-	log.Println(string(b))
 	if err != nil {
 		panic(err)
 	}
@@ -232,6 +245,7 @@ func (memStatsStorage MemStatsMemoryRepo) InitFromFile() {
 
 	var stateValues map[string]*MetricValue
 	json.NewDecoder(file).Decode(&stateValues)
+
 	memStatsStorage.InitStateValues(stateValues)
 }
 
@@ -244,7 +258,7 @@ func (memStatsStorage MemStatsMemoryRepo) InitStateValues(DBSchema map[string]*M
 func (memStatsStorage MemStatsMemoryRepo) GetAllMetrics() map[string]*MetricValue {
 	allMetrics := memStatsStorage.gaugeStorage.GetSchemaDump()
 
-	for metricKey, metricValue := range memStatsStorage.gaugeStorage.GetSchemaDump() {
+	for metricKey, metricValue := range memStatsStorage.counterStorage.GetSchemaDump() {
 		allMetrics[metricKey] = metricValue
 	}
 	return allMetrics

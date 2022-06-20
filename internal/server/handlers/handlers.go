@@ -46,7 +46,7 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, memStatsS
 func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
 	statName := chi.URLParam(request, "statName")
 	statValue := chi.URLParam(request, "statValue")
-	statValueInt, err := strconv.ParseFloat(statValue, 64)
+	statValueFloat, err := strconv.ParseFloat(statValue, 64)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -54,7 +54,10 @@ func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, memStatsStor
 		return
 	}
 
-	err = memStatsStorage.UpdateGaugeValue(statName, statValueInt)
+	err = memStatsStorage.Update(statName, &storage.MetricValue{
+		MType: "gauge",
+		Value: &statValueFloat,
+	})
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte("Server error"))
@@ -70,14 +73,17 @@ func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, memStatsStor
 func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
 	statName := chi.URLParam(request, "statName")
 	statValue := chi.URLParam(request, "statValue")
-	statCounterValue, err := strconv.ParseInt(statValue, 10, 64)
+	statValueInt, err := strconv.ParseInt(statValue, 10, 64)
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
 		rw.Write([]byte(err.Error()))
 		return
 	}
 
-	err = memStatsStorage.UpdateCounterValue(statName, statCounterValue)
+	err = memStatsStorage.Update(statName, &storage.MetricValue{
+		MType: "counter",
+		Delta: &statValueInt,
+	})
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte(err.Error()))
@@ -109,8 +115,8 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, memStatsSto
 </html>`
 	keyValuesHTML := ""
 
-	for k, v := range memStatsStorage.GetDBSchema() {
-		keyValuesHTML += fmt.Sprintf("<div><b>%v</b>: %v</div>", k, v)
+	for metricKey, metric := range memStatsStorage.GetAllMetrics() {
+		keyValuesHTML += fmt.Sprintf("<div><b>%v</b>: %v</div>", metricKey, metric.GetStringValue())
 	}
 
 	htmlPage := fmt.Sprintf(htmlTemplate, keyValuesHTML)
@@ -137,10 +143,8 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 		return
 	}
 
-	statValue, err := memStatsStorage.ReadValue(InputMetricsJSON.ID)
+	statValue, err := memStatsStorage.ReadValue(InputMetricsJSON.ID, InputMetricsJSON.MType)
 	if err != nil {
-		log.Println(InputMetricsJSON.ID)
-		log.Println(memStatsStorage.GetDBSchema())
 		http.Error(rw, "Unknown statName", http.StatusNotFound)
 		return
 	}
@@ -148,17 +152,10 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 	answerJSON := storage.Metric{
 		ID:    InputMetricsJSON.ID,
 		MType: InputMetricsJSON.MType,
+		Delta: statValue.Delta,
+		Value: statValue.Value,
 	}
 
-	if answerJSON.MType == "counter" {
-		var metricValue int64
-		metricValue, err = strconv.ParseInt(statValue, 10, 64)
-		answerJSON.Delta = &metricValue
-	} else {
-		var metricValue float64
-		metricValue, err = strconv.ParseFloat(statValue, 64)
-		answerJSON.Value = &metricValue
-	}
 	if err != nil {
 		http.Error(rw, "Server error", http.StatusInternalServerError)
 		return
@@ -174,13 +171,16 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 }
 
 func PrintStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+	statType := chi.URLParam(request, "statType")
 	statName := chi.URLParam(request, "statName")
-	statValue, err := memStatsStorage.ReadValue(statName)
+
+	metric, err := memStatsStorage.ReadValue(statName, statType)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotFound)
 		rw.Write([]byte("Unknown statName"))
+		return
 	}
 
 	rw.WriteHeader(http.StatusOK)
-	rw.Write([]byte(statValue))
+	rw.Write([]byte(metric.GetStringValue()))
 }
