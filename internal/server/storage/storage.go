@@ -241,9 +241,9 @@ func (memStatsStorage MemStatsMemoryRepo) IterativeUploadToFile() error {
 }
 
 func (memStatsStorage MemStatsMemoryRepo) InitFromFile() {
-	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDONLY|os.O_EXCL, 0777)
+	file, err := os.OpenFile(config.AppConfig.Store.File, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
-		panic(err)
+		panic(err.Error())
 	}
 	defer file.Close()
 
