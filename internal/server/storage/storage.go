@@ -139,11 +139,15 @@ func (memStatsStorage MemStatsMemoryRepo) Update(key string, newMetricValue *Met
 		if newMetricValue.Value == nil {
 			return errors.New("MetricValue Value is empty")
 		}
+		newMetricValue.Delta = nil
+
 		return memStatsStorage.updateGaugeValue(key, newMetricValue)
 	case "counter":
 		if newMetricValue.Delta == nil {
 			return errors.New("MetricValue Delta is empty")
 		}
+		newMetricValue.Value = nil
+
 		return memStatsStorage.updateCounterValue(key, newMetricValue)
 	}
 
