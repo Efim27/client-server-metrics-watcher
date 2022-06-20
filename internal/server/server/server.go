@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -66,6 +67,8 @@ func (server *Server) Run() {
 		memStatsStorage.InitFromFile()
 	}
 	server.chiRouter = newRouter(memStatsStorage)
+	fmt.Println(config.AppConfig.ServerAddr)
+	fmt.Println(memStatsStorage.GetAllMetrics())
 
 	log.Fatal(http.ListenAndServe(config.AppConfig.ServerAddr, server.chiRouter))
 }
