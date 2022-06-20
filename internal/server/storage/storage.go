@@ -154,8 +154,6 @@ func (memStatsStorage MemStatsMemoryRepo) Update(key string, newMetricValue Metr
 	default:
 		return errors.New("Metric type is not defined")
 	}
-
-	return nil
 }
 
 func (memStatsStorage MemStatsMemoryRepo) updateGaugeValue(key string, newMetricValue MetricValue) error {
