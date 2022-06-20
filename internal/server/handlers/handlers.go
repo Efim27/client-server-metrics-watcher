@@ -156,11 +156,6 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 		Value: statValue.Value,
 	}
 
-	if err != nil {
-		http.Error(rw, "Server error", http.StatusInternalServerError)
-		return
-	}
-
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(rw).Encode(answerJSON)

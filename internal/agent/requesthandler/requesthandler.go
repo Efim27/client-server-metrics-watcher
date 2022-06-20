@@ -57,7 +57,7 @@ func oneStatUploadJSON(httpClient *resty.Client, statType string, statName strin
 		metricValue, err = strconv.ParseFloat(statValue, 64)
 		OneMetrics.Value = metricValue
 	default:
-		return errors.New("unknow statType")
+		return errors.New("unknown statType")
 	}
 	if err != nil {
 		return errors.New("invalid statValue")

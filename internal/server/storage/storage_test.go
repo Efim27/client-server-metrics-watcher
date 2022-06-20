@@ -10,12 +10,15 @@ func TestMemoryRepoRW(t *testing.T) {
 	memoryRepo, err := NewMemoryRepo()
 	require.NoError(t, err)
 
-	usernameExpect := "Efim"
-	memoryRepo.Write("username", usernameExpect)
-	usernameReal, err := memoryRepo.Read("username")
+	var counterValueExpect int64 = 50
+	memoryRepo.Write("PollCount", &MetricValue{
+		MType: "counter",
+		Delta: &counterValueExpect,
+	})
+	counterValueReal, err := memoryRepo.Read("PollCount")
 
 	require.NoError(t, err)
-	require.Equal(t, usernameExpect, usernameReal)
+	require.Equal(t, counterValueExpect, *counterValueReal.Delta)
 }
 
 func TestMemoryRepoReadEmpty(t *testing.T) {
@@ -28,12 +31,20 @@ func TestMemoryRepoReadEmpty(t *testing.T) {
 func TestUpdateCounterValue(t *testing.T) {
 	memStatsStorage := NewMemStatsMemoryRepo()
 
-	err := memStatsStorage.UpdateCounterValue("PollCount", 7)
+	var startValue int64 = 7
+	var incrementValue int64 = 22
+	err := memStatsStorage.Update("PollCount", &MetricValue{
+		MType: "counter",
+		Delta: &startValue,
+	})
 	require.NoError(t, err)
-	err = memStatsStorage.UpdateCounterValue("PollCount", 22)
+	err = memStatsStorage.Update("PollCount", &MetricValue{
+		MType: "counter",
+		Delta: &incrementValue,
+	})
 	require.NoError(t, err)
-	PollCount, err := memStatsStorage.ReadValue("PollCount")
+	PollCount, err := memStatsStorage.ReadValue("PollCount", "counter")
 	require.NoError(t, err)
 
-	require.Equal(t, "29", PollCount)
+	require.Equal(t, int64(29), *PollCount.Delta)
 }
