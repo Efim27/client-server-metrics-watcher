@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	chimiddleware "github.com/go-chi/chi/middleware"
 	"metrics/internal/server/config"
 	"metrics/internal/server/handlers"
+	"metrics/internal/server/middleware"
 	"metrics/internal/server/storage"
 )
 
@@ -21,11 +22,11 @@ type Server struct {
 func newRouter(memStatsStorage storage.MemStatsMemoryRepo) chi.Router {
 	router := chi.NewRouter()
 
-	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
-	router.Use(gzipHandle)
+	router.Use(chimiddleware.RequestID)
+	router.Use(chimiddleware.RealIP)
+	router.Use(chimiddleware.Logger)
+	router.Use(chimiddleware.Recoverer)
+	router.Use(middleware.GzipHandle)
 
 	//Маршруты
 	router.Get("/", func(writer http.ResponseWriter, request *http.Request) {

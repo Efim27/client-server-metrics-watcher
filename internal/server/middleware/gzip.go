@@ -1,11 +1,15 @@
-package server
+package middleware
 
 import (
 	"compress/gzip"
 	"io"
 	"net/http"
 	"strings"
+
+	"metrics/internal/server/contenttype"
 )
+
+var gzipAllowedContentTypes = []contenttype.ContentType{contenttype.ContentTypeHTML, contenttype.ContentTypeXML, contenttype.ContentTypeJSON, contenttype.ContentTypePlainText}
 
 type gzipWriter struct {
 	http.ResponseWriter
@@ -16,9 +20,15 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
-func gzipHandle(next http.Handler) http.Handler {
+func GzipHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		//check content-type to compress
+		if !contenttype.CheckContentType(w.Header(), gzipAllowedContentTypes...) {
 			next.ServeHTTP(w, r)
 			return
 		}
