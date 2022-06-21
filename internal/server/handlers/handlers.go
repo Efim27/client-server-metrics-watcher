@@ -98,6 +98,7 @@ func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, memStatsSt
 
 func UpdateNotImplementedPost(rw http.ResponseWriter, request *http.Request) {
 	log.Println("Update not implemented statType")
+
 	rw.WriteHeader(http.StatusNotImplemented)
 	rw.Write([]byte("Not implemented"))
 }
@@ -120,6 +121,7 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, memStatsSto
 	}
 
 	htmlPage := fmt.Sprintf(htmlTemplate, keyValuesHTML)
+	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte(htmlPage))
 }
@@ -176,6 +178,7 @@ func PrintStatValue(rw http.ResponseWriter, request *http.Request, memStatsStora
 		return
 	}
 
+	rw.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte(metric.GetStringValue()))
 }
