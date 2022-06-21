@@ -1,14 +1,12 @@
 package main
 
 import (
-	"flag"
-
+	"metrics/internal/server/config"
 	"metrics/internal/server/server"
 )
 
 func main() {
-	var httpServer server.Server
-	flag.Parse()
-
-	httpServer.Run()
+	config := config.LoadConfig()
+	server := server.NewServer(config)
+	server.Run()
 }

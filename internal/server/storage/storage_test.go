@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"metrics/internal/server/config"
 )
 
 func TestMemoryRepoRW(t *testing.T) {
@@ -29,7 +30,7 @@ func TestMemoryRepoReadEmpty(t *testing.T) {
 }
 
 func TestUpdateCounterValue(t *testing.T) {
-	memStatsStorage := NewMemStatsMemoryRepo()
+	memStatsStorage := NewMemStatsMemoryRepo(config.StoreConfig{})
 
 	var startValue int64 = 7
 	var incrementValue int64 = 22
