@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -135,7 +134,6 @@ func NewMemStatsMemoryRepo() MemStatsMemoryRepo {
 func (memStatsStorage MemStatsMemoryRepo) Update(key string, newMetricValue MetricValue) error {
 	switch newMetricValue.MType {
 	case "gauge":
-		log.Println("update gauge")
 		if newMetricValue.Value == nil {
 			return errors.New("Metric Value is empty")
 		}
@@ -143,7 +141,6 @@ func (memStatsStorage MemStatsMemoryRepo) Update(key string, newMetricValue Metr
 
 		return memStatsStorage.updateGaugeValue(key, newMetricValue)
 	case "counter":
-		log.Println("update counter")
 		if newMetricValue.Delta == nil {
 			return errors.New("Metric Delta is empty")
 		}
@@ -196,10 +193,6 @@ func (memStatsStorage MemStatsMemoryRepo) updateCounterValue(key string, newMetr
 }
 
 func (memStatsStorage MemStatsMemoryRepo) ReadValue(key string, metricType string) (MetricValue, error) {
-	log.Println("Read storage:")
-	log.Println(memStatsStorage.gaugeStorage.GetSchemaDump())
-	log.Println(memStatsStorage.counterStorage.GetSchemaDump())
-
 	switch metricType {
 	case "gauge":
 		return memStatsStorage.gaugeStorage.Read(key)
