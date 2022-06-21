@@ -27,12 +27,6 @@ func GzipHandle(next http.Handler) http.Handler {
 			return
 		}
 
-		//check content-type to compress
-		if !contenttype.CheckContentType(w.Header(), gzipAllowedContentTypes...) {
-			next.ServeHTTP(w, r)
-			return
-		}
-
 		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		if err != nil {
 			io.WriteString(w, err.Error())
