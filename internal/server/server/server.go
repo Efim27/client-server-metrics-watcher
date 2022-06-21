@@ -25,6 +25,7 @@ func newRouter(memStatsStorage storage.MemStatsMemoryRepo) chi.Router {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
+	router.Use(gzipHandle)
 
 	//Маршруты
 	router.Get("/", func(writer http.ResponseWriter, request *http.Request) {
