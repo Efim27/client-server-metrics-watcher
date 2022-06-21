@@ -1,8 +1,14 @@
 package main
 
-import "metrics/internal/server/server"
+import (
+	"flag"
+
+	"metrics/internal/server/server"
+)
 
 func main() {
 	var httpServer server.Server
+	flag.Parse()
+
 	httpServer.Run()
 }

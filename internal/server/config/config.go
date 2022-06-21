@@ -44,8 +44,6 @@ func (config *Config) parseFlags() {
 	flag.BoolVar(&config.Store.Restore, "r", config.Store.Restore, "restoring metrics from file")
 	flag.DurationVar(&config.Store.Interval, "i", config.Store.Interval, "store interval (example: 10s)")
 	flag.StringVar(&config.Store.File, "f", config.Store.File, "path to file for storage metrics")
-
-	flag.Parse()
 }
 
 func LoadConfig() Config {
