@@ -1,4 +1,4 @@
-package requesthandler
+package metricsuploader
 
 import (
 	"encoding/json"
@@ -14,10 +14,29 @@ import (
 	"metrics/internal/agent/statsreader"
 )
 
-func oneStatUpload(httpClient *resty.Client, statType string, statName string, statValue string) error {
-	resp, err := httpClient.R().
+type MetricsUplader struct {
+	client *resty.Client
+	config config.HTTPClientConfig
+}
+
+func NewMetricsUploader(config config.HTTPClientConfig) *MetricsUplader {
+	var metricsUplader MetricsUplader
+	metricsUplader.config = config
+	client := resty.New()
+
+	client.
+		SetRetryCount(metricsUplader.config.RetryCount).
+		SetRetryWaitTime(metricsUplader.config.RetryWaitTime).
+		SetRetryMaxWaitTime(metricsUplader.config.RetryMaxWaitTime)
+	metricsUplader.client = client
+
+	return &metricsUplader
+}
+
+func (metricsUplader *MetricsUplader) oneStatUpload(statType string, statName string, statValue string) error {
+	resp, err := metricsUplader.client.R().
 		SetPathParams(map[string]string{
-			"addr":  config.AppConfig.ServerAddr,
+			"addr":  metricsUplader.config.ServerAddr,
 			"type":  statType,
 			"name":  statName,
 			"value": statValue,
@@ -35,7 +54,7 @@ func oneStatUpload(httpClient *resty.Client, statType string, statName string, s
 	return nil
 }
 
-func oneStatUploadJSON(httpClient *resty.Client, statType string, statName string, statValue string) error {
+func (metricsUplader *MetricsUplader) oneStatUploadJSON(statType string, statName string, statValue string) error {
 	OneMetrics := struct {
 		ID    string  `json:"id"`
 		MType string  `json:"type"`
@@ -68,11 +87,11 @@ func oneStatUploadJSON(httpClient *resty.Client, statType string, statName strin
 		return err
 	}
 
-	resp, err := httpClient.R().
+	resp, err := metricsUplader.client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(string(statJSON)).
 		SetPathParams(map[string]string{
-			"addr": config.AppConfig.ServerAddr,
+			"addr": metricsUplader.config.ServerAddr,
 		}).
 		Post("http://{addr}/update/")
 
@@ -86,7 +105,7 @@ func oneStatUploadJSON(httpClient *resty.Client, statType string, statName strin
 	return nil
 }
 
-func MemoryStatsUpload(httpClient *resty.Client, memoryStats statsreader.MemoryStatsDump) error {
+func (metricsUplader *MetricsUplader) MemoryStatsUpload(memoryStats statsreader.MemoryStatsDump) error {
 	reflectMemoryStats := reflect.ValueOf(memoryStats)
 	typeOfMemoryStats := reflectMemoryStats.Type()
 	errorGroup := new(errgroup.Group)
@@ -97,7 +116,7 @@ func MemoryStatsUpload(httpClient *resty.Client, memoryStats statsreader.MemoryS
 		statType := strings.Split(typeOfMemoryStats.Field(i).Type.String(), ".")[1]
 
 		errorGroup.Go(func() error {
-			return oneStatUploadJSON(httpClient, statType, statName, statValue)
+			return metricsUplader.oneStatUploadJSON(statType, statName, statValue)
 		})
 	}
 

@@ -73,7 +73,6 @@ func (server *Server) Run() {
 		memStatsStorage.InitFromFile()
 	}
 	server.chiRouter = newRouter(memStatsStorage)
-	log.Println(server.config)
 
 	log.Fatal(http.ListenAndServe(server.config.ServerAddr, server.chiRouter))
 }
