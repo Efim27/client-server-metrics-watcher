@@ -7,7 +7,7 @@ import (
 )
 
 func TestRefresh(t *testing.T) {
-	var memStatistics MemoryStatsDump
+	var memStatistics MetricsDump
 	memStatistics.Refresh()
 	memStatistics.Refresh()
 	memStatistics.Refresh()

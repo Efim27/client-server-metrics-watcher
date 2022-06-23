@@ -31,7 +31,7 @@ func NewHTTPClient(config config.Config) *AppHTTP {
 }
 
 func (app *AppHTTP) Run() {
-	var memStatistics statsreader.MemoryStatsDump
+	var metricsDump statsreader.MetricsDump
 	signalChanel := make(chan os.Signal, 1)
 
 	app.timeLog.startTime = time.Now()
@@ -45,12 +45,12 @@ func (app *AppHTTP) Run() {
 		case timeTickerRefresh := <-tickerStatisticsRefresh.C:
 			log.Println("Refresh")
 			app.timeLog.lastRefreshTime = timeTickerRefresh
-			memStatistics.Refresh()
+			metricsDump.Refresh()
 		case timeTickerUpload := <-tickerStatisticsUpload.C:
 			app.timeLog.lastUploadTime = timeTickerUpload
 			log.Println("Upload")
 
-			err := app.metricsUplader.MemoryStatsUpload(memStatistics)
+			err := app.metricsUplader.MetricsUpload(metricsDump)
 			if err != nil {
 				log.Println("Error!")
 				log.Println(err)

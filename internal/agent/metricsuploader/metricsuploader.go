@@ -105,15 +105,15 @@ func (metricsUplader *MetricsUplader) oneStatUploadJSON(statType string, statNam
 	return nil
 }
 
-func (metricsUplader *MetricsUplader) MemoryStatsUpload(memoryStats statsreader.MemoryStatsDump) error {
-	reflectMemoryStats := reflect.ValueOf(memoryStats)
-	typeOfMemoryStats := reflectMemoryStats.Type()
+func (metricsUplader *MetricsUplader) MetricsUpload(metricsDump statsreader.MetricsDump) error {
+	reflectMetricsDump := reflect.ValueOf(metricsDump)
+	typeOfMetricsDump := reflectMetricsDump.Type()
 	errorGroup := new(errgroup.Group)
 
-	for i := 0; i < reflectMemoryStats.NumField(); i++ {
-		statName := typeOfMemoryStats.Field(i).Name
-		statValue := fmt.Sprintf("%v", reflectMemoryStats.Field(i).Interface())
-		statType := strings.Split(typeOfMemoryStats.Field(i).Type.String(), ".")[1]
+	for i := 0; i < reflectMetricsDump.NumField(); i++ {
+		statName := typeOfMetricsDump.Field(i).Name
+		statValue := fmt.Sprintf("%v", reflectMetricsDump.Field(i).Interface())
+		statType := strings.Split(typeOfMetricsDump.Field(i).Type.String(), ".")[1]
 
 		errorGroup.Go(func() error {
 			return metricsUplader.oneStatUploadJSON(statType, statName, statValue)
