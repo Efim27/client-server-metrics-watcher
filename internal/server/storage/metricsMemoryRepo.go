@@ -176,10 +176,12 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
 	}
 	defer file.Close()
 
-	var stateValues map[string]MetricValue
-	json.NewDecoder(file).Decode(&stateValues)
+	var metricsDump map[string]MetricMap
+	json.NewDecoder(file).Decode(&metricsDump)
 
-	metricsMemoryRepo.InitStateValues(stateValues)
+	for _, metricList := range metricsDump {
+		metricsMemoryRepo.InitStateValues(metricList)
+	}
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) InitStateValues(DBSchema map[string]MetricValue) {

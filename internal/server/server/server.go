@@ -19,7 +19,7 @@ type Server struct {
 	startTime time.Time
 }
 
-func newRouter(metricsMemoryRepo storage.MetricStorager) chi.Router {
+func newRouter(metricsMemoryRepo storage.MetricStorager, templatesPath string) chi.Router {
 	router := chi.NewRouter()
 
 	router.Use(chimiddleware.RequestID)
@@ -30,7 +30,7 @@ func newRouter(metricsMemoryRepo storage.MetricStorager) chi.Router {
 
 	//Маршруты
 	router.Get("/", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.PrintStatsValues(writer, request, metricsMemoryRepo)
+		handlers.PrintStatsValues(writer, request, metricsMemoryRepo, templatesPath)
 	})
 
 	//json handler
@@ -74,7 +74,7 @@ func (server *Server) Run() {
 	if server.config.Store.Restore {
 		metricsMemoryRepo.InitFromFile()
 	}
-	server.chiRouter = newRouter(metricsMemoryRepo)
+	server.chiRouter = newRouter(metricsMemoryRepo, server.config.TemplatesAbsPath)
 
 	log.Fatal(http.ListenAndServe(server.config.ServerAddr, server.chiRouter))
 }

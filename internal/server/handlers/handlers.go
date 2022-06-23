@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -103,7 +104,7 @@ func UpdateNotImplementedPost(rw http.ResponseWriter, request *http.Request) {
 	rw.Write([]byte("Not implemented"))
 }
 
-func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
+func PrintStatsValuesOld(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
 	htmlTemplate := `
 <html>
     <head>
@@ -124,6 +125,16 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemo
 	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte(htmlPage))
+}
+
+func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager, templatesPath string) {
+	t, err := template.ParseFiles(templatesPath)
+	if err != nil {
+		fmt.Println("Cant parse template ", err)
+		return
+	}
+
+	err = t.Execute(rw, metricsMemoryRepo.ReadAll())
 }
 
 //JSONStatValue get stat value via json
