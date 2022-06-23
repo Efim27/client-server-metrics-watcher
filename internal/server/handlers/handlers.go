@@ -116,8 +116,8 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemo
 </html>`
 	keyValuesHTML := ""
 
-	for metricKey, metric := range metricsMemoryRepo.ReadAll() {
-		keyValuesHTML += fmt.Sprintf("<div><b>%v</b>: %v</div>", metricKey, metric.GetStringValue())
+	for metricKey, _ := range metricsMemoryRepo.ReadAll() {
+		keyValuesHTML += fmt.Sprintf("<div><b>%v</b>: %v</div>", metricKey, "metric.GetStringValue()")
 	}
 
 	htmlPage := fmt.Sprintf(htmlTemplate, keyValuesHTML)

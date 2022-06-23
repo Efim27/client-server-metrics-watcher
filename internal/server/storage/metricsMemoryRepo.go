@@ -188,17 +188,11 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitStateValues(DBSchema map[string]M
 	}
 }
 
-func (metricsMemoryRepo MetricsMemoryRepo) ReadAll() map[string]MetricValue {
-	allMetrics := make(map[string]MetricValue)
-
-	for metricKey, metricValue := range metricsMemoryRepo.gaugeStorage.GetSchemaDump() {
-		allMetrics[metricKey] = metricValue
+func (metricsMemoryRepo MetricsMemoryRepo) ReadAll() map[string]MetricMap {
+	return map[string]MetricMap{
+		"gauge":   metricsMemoryRepo.gaugeStorage.GetSchemaDump(),
+		"counter": metricsMemoryRepo.counterStorage.GetSchemaDump(),
 	}
-
-	for metricKey, metricValue := range metricsMemoryRepo.counterStorage.GetSchemaDump() {
-		allMetrics[metricKey] = metricValue
-	}
-	return allMetrics
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) Close() error {
