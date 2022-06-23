@@ -104,29 +104,6 @@ func UpdateNotImplementedPost(rw http.ResponseWriter, request *http.Request) {
 	rw.Write([]byte("Not implemented"))
 }
 
-func PrintStatsValuesOld(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
-	htmlTemplate := `
-<html>
-    <head>
-    <title></title>
-    </head>
-    <body>
-		<h3 class="keyvalues-header">All values: </h3>
-        %v
-    </body>
-</html>`
-	keyValuesHTML := ""
-
-	for metricKey, _ := range metricsMemoryRepo.ReadAll() {
-		keyValuesHTML += fmt.Sprintf("<div><b>%v</b>: %v</div>", metricKey, "metric.GetStringValue()")
-	}
-
-	htmlPage := fmt.Sprintf(htmlTemplate, keyValuesHTML)
-	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-	rw.WriteHeader(http.StatusOK)
-	rw.Write([]byte(htmlPage))
-}
-
 func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager, templatesPath string) {
 	t, err := template.ParseFiles(templatesPath)
 	if err != nil {
@@ -134,7 +111,12 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemo
 		return
 	}
 
+	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = t.Execute(rw, metricsMemoryRepo.ReadAll())
+	if err != nil {
+		fmt.Println("Cant render template ", err)
+		return
+	}
 }
 
 //JSONStatValue get stat value via json
