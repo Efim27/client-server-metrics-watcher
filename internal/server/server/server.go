@@ -19,7 +19,7 @@ type Server struct {
 	startTime time.Time
 }
 
-func newRouter(memStatsStorage storage.MemStatsMemoryRepo) chi.Router {
+func newRouter(metricsMemoryRepo storage.MetricStorager) chi.Router {
 	router := chi.NewRouter()
 
 	router.Use(chimiddleware.RequestID)
@@ -30,29 +30,29 @@ func newRouter(memStatsStorage storage.MemStatsMemoryRepo) chi.Router {
 
 	//Маршруты
 	router.Get("/", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.PrintStatsValues(writer, request, memStatsStorage)
+		handlers.PrintStatsValues(writer, request, metricsMemoryRepo)
 	})
 
 	//json handler
 	router.Post("/value/", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.JSONStatValue(writer, request, memStatsStorage)
+		handlers.JSONStatValue(writer, request, metricsMemoryRepo)
 	})
 
 	router.Get("/value/{statType}/{statName}", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.PrintStatValue(writer, request, memStatsStorage)
+		handlers.PrintStatValue(writer, request, metricsMemoryRepo)
 	})
 
 	router.Route("/update/", func(router chi.Router) {
 		//json handler
 		router.Post("/", func(writer http.ResponseWriter, request *http.Request) {
-			handlers.UpdateStatJSONPost(writer, request, memStatsStorage)
+			handlers.UpdateStatJSONPost(writer, request, metricsMemoryRepo)
 		})
 
 		router.Post("/gauge/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
-			handlers.UpdateGaugePost(writer, request, memStatsStorage)
+			handlers.UpdateGaugePost(writer, request, metricsMemoryRepo)
 		})
 		router.Post("/counter/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
-			handlers.UpdateCounterPost(writer, request, memStatsStorage)
+			handlers.UpdateCounterPost(writer, request, metricsMemoryRepo)
 		})
 		router.Post("/{statType}/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
 			handlers.UpdateNotImplementedPost(writer, request)
@@ -69,12 +69,12 @@ func NewServer(config config.Config) *Server {
 }
 
 func (server *Server) Run() {
-	memStatsStorage := storage.NewMemStatsMemoryRepo(server.config.Store)
-	defer memStatsStorage.Close()
+	metricsMemoryRepo := storage.NewMetricsMemoryRepo(server.config.Store)
+	defer metricsMemoryRepo.Close()
 	if server.config.Store.Restore {
-		memStatsStorage.InitFromFile()
+		metricsMemoryRepo.InitFromFile()
 	}
-	server.chiRouter = newRouter(memStatsStorage)
+	server.chiRouter = newRouter(metricsMemoryRepo)
 
 	log.Fatal(http.ListenAndServe(server.config.ServerAddr, server.chiRouter))
 }

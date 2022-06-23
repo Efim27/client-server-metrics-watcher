@@ -13,7 +13,7 @@ import (
 )
 
 //UpdateStatJSONPost update stat via json
-func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
 	var OneMetric storage.Metric
 
 	err := json.NewDecoder(request.Body).Decode(&OneMetric)
@@ -28,7 +28,7 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, memStatsS
 		return
 	}
 
-	err = memStatsStorage.Update(OneMetric.ID, storage.MetricValue{
+	err = metricsMemoryRepo.Update(OneMetric.ID, storage.MetricValue{
 		MType: OneMetric.MType,
 		Value: OneMetric.Value,
 		Delta: OneMetric.Delta,
@@ -43,7 +43,7 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, memStatsS
 	rw.Write([]byte("Ok"))
 }
 
-func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
 	statName := chi.URLParam(request, "statName")
 	statValue := chi.URLParam(request, "statValue")
 	statValueFloat, err := strconv.ParseFloat(statValue, 64)
@@ -54,7 +54,7 @@ func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, memStatsStor
 		return
 	}
 
-	err = memStatsStorage.Update(statName, storage.MetricValue{
+	err = metricsMemoryRepo.Update(statName, storage.MetricValue{
 		MType: "gauge",
 		Value: &statValueFloat,
 	})
@@ -70,7 +70,7 @@ func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, memStatsStor
 	rw.Write([]byte("Ok"))
 }
 
-func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
 	statName := chi.URLParam(request, "statName")
 	statValue := chi.URLParam(request, "statValue")
 	statValueInt, err := strconv.ParseInt(statValue, 10, 64)
@@ -80,7 +80,7 @@ func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, memStatsSt
 		return
 	}
 
-	err = memStatsStorage.Update(statName, storage.MetricValue{
+	err = metricsMemoryRepo.Update(statName, storage.MetricValue{
 		MType: "counter",
 		Delta: &statValueInt,
 	})
@@ -103,7 +103,7 @@ func UpdateNotImplementedPost(rw http.ResponseWriter, request *http.Request) {
 	rw.Write([]byte("Not implemented"))
 }
 
-func PrintStatsValues(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
 	htmlTemplate := `
 <html>
     <head>
@@ -116,7 +116,7 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, memStatsSto
 </html>`
 	keyValuesHTML := ""
 
-	for metricKey, metric := range memStatsStorage.GetAllMetrics() {
+	for metricKey, metric := range metricsMemoryRepo.ReadAll() {
 		keyValuesHTML += fmt.Sprintf("<div><b>%v</b>: %v</div>", metricKey, metric.GetStringValue())
 	}
 
@@ -127,7 +127,7 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, memStatsSto
 }
 
 //JSONStatValue get stat value via json
-func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+func JSONStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
 	var InputMetricsJSON struct {
 		ID    string `json:"id" valid:"required"`
 		MType string `json:"type" valid:"required,in(counter|gauge)"`
@@ -145,7 +145,7 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 		return
 	}
 
-	statValue, err := memStatsStorage.ReadValue(InputMetricsJSON.ID, InputMetricsJSON.MType)
+	statValue, err := metricsMemoryRepo.Read(InputMetricsJSON.ID, InputMetricsJSON.MType)
 	if err != nil {
 		http.Error(rw, "Unknown statName", http.StatusNotFound)
 		return
@@ -167,11 +167,11 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorag
 	}
 }
 
-func PrintStatValue(rw http.ResponseWriter, request *http.Request, memStatsStorage storage.MemStatsMemoryRepo) {
+func PrintStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
 	statType := chi.URLParam(request, "statType")
 	statName := chi.URLParam(request, "statName")
 
-	metric, err := memStatsStorage.ReadValue(statName, statType)
+	metric, err := metricsMemoryRepo.Read(statName, statType)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotFound)
 		rw.Write([]byte("Unknown statName"))
