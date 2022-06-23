@@ -1,5 +1,10 @@
 package storage
 
+const (
+	MeticTypeGauge   = "gauge"
+	MeticTypeCounter = "counter"
+)
+
 type MetricMap map[string]MetricValue
 
 type MetricStorager interface {

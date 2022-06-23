@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"metrics/internal/agent/config"
 	"metrics/internal/agent/statsreader"
+	"metrics/internal/server/storage"
 )
 
 type MetricsUplader struct {
@@ -67,11 +68,11 @@ func (metricsUplader *MetricsUplader) oneStatUploadJSON(statType string, statNam
 
 	var err error
 	switch OneMetrics.MType {
-	case "counter":
+	case storage.MeticTypeCounter:
 		var metricValue int64
 		metricValue, err = strconv.ParseInt(statValue, 10, 64)
 		OneMetrics.Delta = metricValue
-	case "gauge":
+	case storage.MeticTypeGauge:
 		var metricValue float64
 		metricValue, err = strconv.ParseFloat(statValue, 64)
 		OneMetrics.Value = metricValue

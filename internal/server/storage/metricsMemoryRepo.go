@@ -28,9 +28,9 @@ type Metric struct {
 
 func (metric MetricValue) GetStringValue() string {
 	switch metric.MType {
-	case "gauge":
+	case MeticTypeGauge:
 		return fmt.Sprintf("%v", *metric.Value)
-	case "counter":
+	case MeticTypeCounter:
 		return fmt.Sprintf("%v", *metric.Delta)
 	default:
 		return ""
@@ -69,14 +69,14 @@ func NewMetricsMemoryRepo(config config.StoreConfig) MetricsMemoryRepo {
 
 func (metricsMemoryRepo MetricsMemoryRepo) Update(key string, newMetricValue MetricValue) error {
 	switch newMetricValue.MType {
-	case "gauge":
+	case MeticTypeGauge:
 		if newMetricValue.Value == nil {
 			return errors.New("Metric Value is empty")
 		}
 		newMetricValue.Delta = nil
 
 		return metricsMemoryRepo.updateGaugeValue(key, newMetricValue)
-	case "counter":
+	case MeticTypeCounter:
 		if newMetricValue.Delta == nil {
 			return errors.New("Metric Delta is empty")
 		}
@@ -106,7 +106,7 @@ func (metricsMemoryRepo MetricsMemoryRepo) updateGaugeValue(key string, newMetri
 
 func (metricsMemoryRepo MetricsMemoryRepo) updateCounterValue(key string, newMetricValue MetricValue) error {
 	//Чтение старого значения
-	oldMetricValue, err := metricsMemoryRepo.Read(key, "counter")
+	oldMetricValue, err := metricsMemoryRepo.Read(key, MeticTypeCounter)
 	if err != nil {
 		var delta int64 = 0
 		oldMetricValue = MetricValue{
@@ -130,9 +130,9 @@ func (metricsMemoryRepo MetricsMemoryRepo) updateCounterValue(key string, newMet
 
 func (metricsMemoryRepo MetricsMemoryRepo) Read(key string, metricType string) (MetricValue, error) {
 	switch metricType {
-	case "gauge":
+	case MeticTypeGauge:
 		return metricsMemoryRepo.gaugeStorage.Read(key)
-	case "counter":
+	case MeticTypeCounter:
 		return metricsMemoryRepo.counterStorage.Read(key)
 	default:
 		return MetricValue{}, errors.New("metricType not found")
@@ -192,8 +192,8 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitStateValues(DBSchema map[string]M
 
 func (metricsMemoryRepo MetricsMemoryRepo) ReadAll() map[string]MetricMap {
 	return map[string]MetricMap{
-		"gauge":   metricsMemoryRepo.gaugeStorage.GetSchemaDump(),
-		"counter": metricsMemoryRepo.counterStorage.GetSchemaDump(),
+		MeticTypeGauge:   metricsMemoryRepo.gaugeStorage.GetSchemaDump(),
+		MeticTypeCounter: metricsMemoryRepo.counterStorage.GetSchemaDump(),
 	}
 }
 

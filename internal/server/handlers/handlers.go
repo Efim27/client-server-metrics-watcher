@@ -56,7 +56,7 @@ func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, metricsMemor
 	}
 
 	err = metricsMemoryRepo.Update(statName, storage.MetricValue{
-		MType: "gauge",
+		MType: storage.MeticTypeGauge,
 		Value: &statValueFloat,
 	})
 	if err != nil {
@@ -82,7 +82,7 @@ func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, metricsMem
 	}
 
 	err = metricsMemoryRepo.Update(statName, storage.MetricValue{
-		MType: "counter",
+		MType: storage.MeticTypeCounter,
 		Delta: &statValueInt,
 	})
 	if err != nil {
