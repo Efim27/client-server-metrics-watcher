@@ -10,38 +10,44 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/go-chi/chi"
+	"metrics/internal/server/responses"
 	"metrics/internal/server/storage"
 )
 
 //UpdateStatJSONPost update stat via json
 func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
-	var OneMetric storage.Metric
+	rw.Header().Set("Content-Type", "application/json")
 
-	err := json.NewDecoder(request.Body).Decode(&OneMetric)
+	inputJSON := struct {
+		storage.Metric
+		Hash string `json:"hash,omitempty"`
+	}{}
+	response := responses.NewDefaultResponse()
+
+	err := json.NewDecoder(request.Body).Decode(&inputJSON)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
 		return
 	}
 
-	_, err = govalidator.ValidateStruct(OneMetric)
+	_, err = govalidator.ValidateStruct(inputJSON)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
 		return
 	}
 
-	err = metricsMemoryRepo.Update(OneMetric.ID, storage.MetricValue{
-		MType: OneMetric.MType,
-		Value: OneMetric.Value,
-		Delta: OneMetric.Delta,
+	err = metricsMemoryRepo.Update(inputJSON.ID, storage.MetricValue{
+		MType: inputJSON.MType,
+		Value: inputJSON.Value,
+		Delta: inputJSON.Delta,
 	})
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
 		return
 	}
 
-	log.Println("Update metric via JSON")
 	rw.WriteHeader(http.StatusOK)
-	rw.Write([]byte("Ok"))
+	rw.Write(response.GetJSONBytes())
 }
 
 func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
