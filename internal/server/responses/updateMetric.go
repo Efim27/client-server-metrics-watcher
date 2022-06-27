@@ -1,5 +1,7 @@
 package responses
 
+import "encoding/json"
+
 type UpdateMetricResponse struct {
 	DefaultResponse
 	Hash string `json:"hash,omitempty"`
@@ -19,4 +21,9 @@ func (response *UpdateMetricResponse) SetHash(hash string) *UpdateMetricResponse
 
 	response.Hash = hash
 	return response
+}
+
+func (response UpdateMetricResponse) GetJSONBytes() []byte {
+	jsonBytes, _ := json.Marshal(response)
+	return jsonBytes
 }

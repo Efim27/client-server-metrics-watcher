@@ -3,7 +3,6 @@ package storage
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,10 +22,8 @@ type MetricValue struct {
 }
 
 type Metric struct {
-	ID    string   `json:"id" valid:"required"`
-	MType string   `json:"type" valid:"required,in(counter|gauge)"`
-	Delta *int64   `json:"delta,omitempty"`
-	Value *float64 `json:"value,omitempty"`
+	ID string `json:"id" valid:"required"`
+	MetricValue
 }
 
 func (metric MetricValue) GetStringValue() string {
@@ -41,6 +38,10 @@ func (metric MetricValue) GetStringValue() string {
 }
 
 func (metric MetricValue) GetHash(id, signKey string) []byte {
+	if signKey == "" {
+		return nil
+	}
+
 	var metricLabel string
 	switch metric.MType {
 	case MeticTypeGauge:
@@ -51,14 +52,8 @@ func (metric MetricValue) GetHash(id, signKey string) []byte {
 		return nil
 	}
 
-	metricLabelBytes, err := hex.DecodeString(metricLabel)
-	if err != nil {
-		return nil
-	}
-
-	keyDecoded, err := hex.DecodeString(signKey)
-	signerHMAC := hmac.New(sha256.New, keyDecoded)
-	signerHMAC.Write(metricLabelBytes)
+	signerHMAC := hmac.New(sha256.New, []byte(signKey))
+	signerHMAC.Write([]byte(metricLabel))
 	return signerHMAC.Sum(nil)
 }
 

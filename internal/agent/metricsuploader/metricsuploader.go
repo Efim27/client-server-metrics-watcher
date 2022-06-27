@@ -1,6 +1,7 @@
 package metricsuploader
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,13 +17,15 @@ import (
 )
 
 type MetricsUplader struct {
-	client *resty.Client
-	config config.HTTPClientConfig
+	client  *resty.Client
+	config  config.HTTPClientConfig
+	signKey string
 }
 
-func NewMetricsUploader(config config.HTTPClientConfig) *MetricsUplader {
+func NewMetricsUploader(config config.HTTPClientConfig, signKey string) *MetricsUplader {
 	var metricsUplader MetricsUplader
 	metricsUplader.config = config
+	metricsUplader.signKey = signKey
 	client := resty.New()
 
 	client.
@@ -57,13 +60,15 @@ func (metricsUplader *MetricsUplader) oneStatUpload(statType string, statName st
 
 func (metricsUplader *MetricsUplader) oneStatUploadJSON(statType string, statName string, statValue string) error {
 	OneMetrics := struct {
-		ID    string  `json:"id"`
-		MType string  `json:"type"`
-		Delta int64   `json:"delta"`
-		Value float64 `json:"value"`
+		storage.Metric
+		Hash string `json:"hash"`
 	}{
-		ID:    statName,
-		MType: statType,
+		Metric: storage.Metric{
+			ID: statName,
+			MetricValue: storage.MetricValue{
+				MType: statType,
+			},
+		},
 	}
 
 	var err error
@@ -71,16 +76,20 @@ func (metricsUplader *MetricsUplader) oneStatUploadJSON(statType string, statNam
 	case storage.MeticTypeCounter:
 		var metricValue int64
 		metricValue, err = strconv.ParseInt(statValue, 10, 64)
-		OneMetrics.Delta = metricValue
+		OneMetrics.Delta = &metricValue
 	case storage.MeticTypeGauge:
 		var metricValue float64
 		metricValue, err = strconv.ParseFloat(statValue, 64)
-		OneMetrics.Value = metricValue
+		OneMetrics.Value = &metricValue
 	default:
 		return errors.New("unknown statType")
 	}
 	if err != nil {
 		return errors.New("invalid statValue")
+	}
+
+	if metricsUplader.signKey != "" {
+		OneMetrics.Hash = hex.EncodeToString(OneMetrics.MetricValue.GetHash(OneMetrics.ID, metricsUplader.signKey))
 	}
 
 	statJSON, err := json.Marshal(OneMetrics)
