@@ -51,7 +51,7 @@ func (server *Server) initRouter() {
 
 	//json handler
 	router.Post("/value/", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.JSONStatValue(writer, request, server.storage)
+		handlers.JSONStatValue(writer, request, server.storage, server.config.SignKey)
 	})
 
 	router.Get("/value/{statType}/{statName}", func(writer http.ResponseWriter, request *http.Request) {

@@ -89,7 +89,7 @@ func (metricsUplader *MetricsUplader) oneStatUploadJSON(statType string, statNam
 	}
 
 	if metricsUplader.signKey != "" {
-		OneMetrics.Hash = hex.EncodeToString(OneMetrics.MetricValue.GetHash(OneMetrics.ID, metricsUplader.signKey))
+		OneMetrics.Hash = hex.EncodeToString(OneMetrics.GetHash(OneMetrics.ID, metricsUplader.signKey))
 	}
 
 	statJSON, err := json.Marshal(OneMetrics)

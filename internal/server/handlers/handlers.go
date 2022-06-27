@@ -149,7 +149,7 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemo
 }
 
 //JSONStatValue get stat value via json
-func JSONStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
+func JSONStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager, SignKey string) {
 	var InputMetricsJSON struct {
 		ID    string `json:"id" valid:"required"`
 		MType string `json:"type" valid:"required,in(counter|gauge)"`
@@ -173,13 +173,22 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryR
 		return
 	}
 
-	answerJSON := storage.Metric{
-		ID: InputMetricsJSON.ID,
-		MetricValue: storage.MetricValue{
-			MType: statValue.MType,
-			Delta: statValue.Delta,
-			Value: statValue.Value,
+	answerJSON := struct {
+		storage.Metric
+		Hash string `json:"hash"`
+	}{
+		Metric: storage.Metric{
+			ID: InputMetricsJSON.ID,
+			MetricValue: storage.MetricValue{
+				MType: statValue.MType,
+				Delta: statValue.Delta,
+				Value: statValue.Value,
+			},
 		},
+	}
+
+	if SignKey != "" {
+		answerJSON.Hash = hex.EncodeToString(answerJSON.Metric.GetHash(InputMetricsJSON.ID, SignKey))
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
