@@ -17,6 +17,7 @@ type StoreConfig struct {
 type Config struct {
 	ServerAddr       string `env:"ADDRESS"` //host:port
 	TemplatesAbsPath string `env:"TEMPLATES_ABS_PATH"`
+	SignKey          string `env:"KEY"`
 	Store            StoreConfig
 }
 
@@ -43,6 +44,9 @@ func (config *Config) parseEnv() error {
 
 func (config *Config) parseFlags() {
 	flag.StringVar(&config.ServerAddr, "a", config.ServerAddr, "server address (host:port)")
+	flag.StringVar(&config.SignKey, "k", config.SignKey, "sign key")
+
+	//StoreConfig
 	flag.BoolVar(&config.Store.Restore, "r", config.Store.Restore, "restoring metrics from file")
 	flag.DurationVar(&config.Store.Interval, "i", config.Store.Interval, "store interval (example: 10s)")
 	flag.StringVar(&config.Store.File, "f", config.Store.File, "path to file for storage metrics")

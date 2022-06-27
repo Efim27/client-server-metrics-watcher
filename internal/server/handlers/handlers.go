@@ -22,7 +22,7 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMe
 		storage.Metric
 		Hash string `json:"hash,omitempty"`
 	}{}
-	response := responses.NewDefaultResponse()
+	response := responses.NewUpdateMetricResponse()
 
 	err := json.NewDecoder(request.Body).Decode(&inputJSON)
 	if err != nil {
@@ -47,7 +47,7 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMe
 	}
 
 	rw.WriteHeader(http.StatusOK)
-	rw.Write(response.GetJSONBytes())
+	rw.Write(response.SetHash(inputJSON.Hash).GetJSONBytes())
 }
 
 func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {

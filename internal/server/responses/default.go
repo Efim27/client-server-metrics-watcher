@@ -5,7 +5,6 @@ import "encoding/json"
 type DefaultResponse struct {
 	Status string `json:"status"`
 	Error  string `json:"error,omitempty"`
-	Hash   string `json:"hash,omitempty"`
 }
 
 func NewDefaultResponse() DefaultResponse {
