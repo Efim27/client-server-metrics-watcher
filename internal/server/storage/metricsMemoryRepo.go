@@ -37,6 +37,10 @@ func (metric MetricValue) GetStringValue() string {
 	}
 }
 
+func (metric MetricValue) GetHash() []byte {
+	return nil
+}
+
 //MetricsMemoryRepo - репо для приходящей статистики
 type MetricsMemoryRepo struct {
 	uploadMutex    *sync.RWMutex

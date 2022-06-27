@@ -12,7 +12,11 @@ func NewUpdateMetricResponse() UpdateMetricResponse {
 	return response
 }
 
-func (response *UpdateMetricResponse) SetHash(newStatus string) *UpdateMetricResponse {
-	response.Status = newStatus
+func (response *UpdateMetricResponse) SetHash(hash string) *UpdateMetricResponse {
+	if hash == "" {
+		return response
+	}
+
+	response.Hash = hash
 	return response
 }

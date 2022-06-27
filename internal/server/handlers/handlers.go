@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"crypto/hmac"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -36,11 +39,24 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMe
 		return
 	}
 
-	err = metricsMemoryRepo.Update(inputJSON.ID, storage.MetricValue{
+	newMetricValue := storage.MetricValue{
 		MType: inputJSON.MType,
 		Value: inputJSON.Value,
 		Delta: inputJSON.Delta,
-	})
+	}
+
+	requestMetricHash, err := hex.DecodeString(inputJSON.Hash)
+	if err != nil {
+		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
+		return
+	}
+
+	if (inputJSON.Hash != "") && (!hmac.Equal(requestMetricHash, newMetricValue.GetHash())) {
+		http.Error(rw, response.SetStatusError(errors.New("invalid hash")).GetJSONString(), http.StatusBadRequest)
+		return
+	}
+
+	err = metricsMemoryRepo.Update(inputJSON.ID, newMetricValue)
 	if err != nil {
 		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
 		return
