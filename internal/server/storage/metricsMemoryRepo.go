@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,8 +40,26 @@ func (metric MetricValue) GetStringValue() string {
 	}
 }
 
-func (metric MetricValue) GetHash() []byte {
-	return nil
+func (metric MetricValue) GetHash(id, signKey string) []byte {
+	var metricLabel string
+	switch metric.MType {
+	case MeticTypeGauge:
+		metricLabel = fmt.Sprintf("%s:gauge:%f", id, *metric.Value)
+	case MeticTypeCounter:
+		metricLabel = fmt.Sprintf("%s:counter:%d", id, *metric.Delta)
+	default:
+		return nil
+	}
+
+	metricLabelBytes, err := hex.DecodeString(metricLabel)
+	if err != nil {
+		return nil
+	}
+
+	keyDecoded, err := hex.DecodeString(signKey)
+	signerHMAC := hmac.New(sha256.New, keyDecoded)
+	signerHMAC.Write(metricLabelBytes)
+	return signerHMAC.Sum(nil)
 }
 
 //MetricsMemoryRepo - репо для приходящей статистики

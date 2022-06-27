@@ -18,7 +18,7 @@ import (
 )
 
 //UpdateStatJSONPost update stat via json
-func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
+func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager, SignKey string) {
 	rw.Header().Set("Content-Type", "application/json")
 
 	inputJSON := struct {
@@ -51,7 +51,7 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMe
 		return
 	}
 
-	if (inputJSON.Hash != "") && (!hmac.Equal(requestMetricHash, newMetricValue.GetHash())) {
+	if (inputJSON.Hash != "") && (!hmac.Equal(requestMetricHash, newMetricValue.GetHash(inputJSON.ID, SignKey))) {
 		http.Error(rw, response.SetStatusError(errors.New("invalid hash")).GetJSONString(), http.StatusBadRequest)
 		return
 	}

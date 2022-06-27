@@ -14,12 +14,28 @@ import (
 )
 
 type Server struct {
+	storage   storage.MetricStorager
 	chiRouter chi.Router
 	config    config.Config
 	startTime time.Time
 }
 
-func newRouter(metricsMemoryRepo storage.MetricStorager, templatesPath string) chi.Router {
+func NewServer(config config.Config) *Server {
+	return &Server{
+		config: config,
+	}
+}
+
+func (server *Server) initStorage() {
+	metricsMemoryRepo := storage.NewMetricsMemoryRepo(server.config.Store)
+	if server.config.Store.Restore {
+		metricsMemoryRepo.InitFromFile()
+	}
+
+	server.storage = metricsMemoryRepo
+}
+
+func (server *Server) initRouter() {
 	router := chi.NewRouter()
 
 	router.Use(chimiddleware.RequestID)
@@ -30,51 +46,42 @@ func newRouter(metricsMemoryRepo storage.MetricStorager, templatesPath string) c
 
 	//Маршруты
 	router.Get("/", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.PrintStatsValues(writer, request, metricsMemoryRepo, templatesPath)
+		handlers.PrintStatsValues(writer, request, server.storage, server.config.TemplatesAbsPath)
 	})
 
 	//json handler
 	router.Post("/value/", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.JSONStatValue(writer, request, metricsMemoryRepo)
+		handlers.JSONStatValue(writer, request, server.storage)
 	})
 
 	router.Get("/value/{statType}/{statName}", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.PrintStatValue(writer, request, metricsMemoryRepo)
+		handlers.PrintStatValue(writer, request, server.storage)
 	})
 
 	router.Route("/update/", func(router chi.Router) {
 		//json handler
 		router.Post("/", func(writer http.ResponseWriter, request *http.Request) {
-			handlers.UpdateStatJSONPost(writer, request, metricsMemoryRepo)
+			handlers.UpdateStatJSONPost(writer, request, server.storage, server.config.SignKey)
 		})
 
 		router.Post("/gauge/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
-			handlers.UpdateGaugePost(writer, request, metricsMemoryRepo)
+			handlers.UpdateGaugePost(writer, request, server.storage)
 		})
 		router.Post("/counter/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
-			handlers.UpdateCounterPost(writer, request, metricsMemoryRepo)
+			handlers.UpdateCounterPost(writer, request, server.storage)
 		})
 		router.Post("/{statType}/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
 			handlers.UpdateNotImplementedPost(writer, request)
 		})
 	})
 
-	return router
-}
-
-func NewServer(config config.Config) *Server {
-	return &Server{
-		config: config,
-	}
+	server.chiRouter = router
 }
 
 func (server *Server) Run() {
-	metricsMemoryRepo := storage.NewMetricsMemoryRepo(server.config.Store)
-	defer metricsMemoryRepo.Close()
-	if server.config.Store.Restore {
-		metricsMemoryRepo.InitFromFile()
-	}
-	server.chiRouter = newRouter(metricsMemoryRepo, server.config.TemplatesAbsPath)
+	server.initStorage()
+	defer server.storage.Close()
+	server.initRouter()
 
 	log.Fatal(http.ListenAndServe(server.config.ServerAddr, server.chiRouter))
 }
