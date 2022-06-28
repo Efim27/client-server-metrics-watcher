@@ -38,15 +38,12 @@ func (server *Server) selectStorage() storage.MetricStorager {
 		return repository
 	}
 
-	if storageConfig.File != "" {
-		repository := storage.NewMetricsMemoryRepo(storageConfig)
-		if server.config.Store.Restore {
-			repository.InitFromFile()
-		}
-		return repository
+	repository := storage.NewMetricsMemoryRepo(storageConfig)
+	if server.config.Store.Restore {
+		repository.InitFromFile()
 	}
 
-	panic("Storage is not selected")
+	return repository
 }
 
 func (server *Server) initStorage() {
