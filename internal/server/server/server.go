@@ -26,12 +26,31 @@ func NewServer(config config.Config) *Server {
 	}
 }
 
-func (server *Server) initStorage() {
-	metricsMemoryRepo := storage.NewMetricsMemoryRepo(server.config.Store)
-	if server.config.Store.Restore {
-		metricsMemoryRepo.InitFromFile()
+func (server *Server) selectStorage() storage.MetricStorager {
+	storageConfig := server.config.Store
+
+	if storageConfig.DatabaseDSN != "" {
+		repository, err := storage.NewDBRepo(storageConfig)
+		if err != nil {
+			panic(err)
+		}
+
+		return repository
 	}
 
+	if storageConfig.File != "" {
+		repository := storage.NewMetricsMemoryRepo(storageConfig)
+		if server.config.Store.Restore {
+			repository.InitFromFile()
+		}
+		return repository
+	}
+
+	panic("Storage is not selected")
+}
+
+func (server *Server) initStorage() {
+	metricsMemoryRepo := server.selectStorage()
 	server.storage = metricsMemoryRepo
 }
 

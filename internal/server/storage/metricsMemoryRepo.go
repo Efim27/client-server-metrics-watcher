@@ -57,7 +57,7 @@ func (metric MetricValue) GetHash(id, signKey string) []byte {
 	return signerHMAC.Sum(nil)
 }
 
-//MetricsMemoryRepo - репо для приходящей статистики
+//MetricsMemoryRepo - репо в оперативной памяти для приходящей статистики
 type MetricsMemoryRepo struct {
 	uploadMutex    *sync.RWMutex
 	gaugeStorage   *MemoryRepo

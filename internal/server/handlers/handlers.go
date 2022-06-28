@@ -217,6 +217,7 @@ func PrintStatValue(rw http.ResponseWriter, request *http.Request, metricsMemory
 }
 
 func PingGet(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
+	rw.Header().Set("Content-Type", "application/json")
 	response := responses.NewDefaultResponse()
 	pingError := metricsMemoryRepo.Ping()
 
