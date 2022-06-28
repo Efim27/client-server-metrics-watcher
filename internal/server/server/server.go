@@ -31,21 +31,21 @@ func NewServer(config config.Config) *Server {
 func (server *Server) selectStorage() storage.MetricStorager {
 	storageConfig := server.config.Store
 
-	if storageConfig.File != "" {
-		log.Println("Memory Storage")
-		repository := storage.NewMetricsMemoryRepo(storageConfig)
-		if server.config.Store.Restore {
-			repository.InitFromFile()
+	if storageConfig.DatabaseDSN != "" {
+		log.Println("DB Storage")
+		repository, err := storage.NewDBRepo(storageConfig)
+		if err != nil {
+			panic(err)
 		}
+
 		return repository
 	}
 
-	log.Println("DB Storage")
-	repository, err := storage.NewDBRepo(storageConfig)
-	if err != nil {
-		panic(err)
+	log.Println("Memory Storage")
+	repository := storage.NewMetricsMemoryRepo(storageConfig)
+	if server.config.Store.Restore {
+		repository.InitFromFile()
 	}
-
 	return repository
 }
 
