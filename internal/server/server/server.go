@@ -31,7 +31,7 @@ func NewServer(config config.Config) *Server {
 func (server *Server) selectStorage() storage.MetricStorager {
 	storageConfig := server.config.Store
 
-	if storageConfig.DatabaseDSN == "" {
+	if storageConfig.File != "" {
 		log.Println("Memory Storage")
 		repository := storage.NewMetricsMemoryRepo(storageConfig)
 		if server.config.Store.Restore {
