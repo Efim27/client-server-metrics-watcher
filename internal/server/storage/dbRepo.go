@@ -72,11 +72,11 @@ func (repository DBRepo) Read(key string, metricType string) (MetricValue, error
 }
 
 func (repository DBRepo) readGauge(key string) (MetricValue, error) {
-	return MetricValue{}, nil
+	return MetricValue{}, errors.New("not found")
 }
 
 func (repository DBRepo) readCounter(key string) (MetricValue, error) {
-	return MetricValue{}, nil
+	return MetricValue{}, errors.New("not found")
 }
 
 func (repository DBRepo) InitStateValues(DBSchema map[string]MetricValue) {

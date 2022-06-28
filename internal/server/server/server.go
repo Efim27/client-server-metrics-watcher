@@ -21,6 +21,8 @@ type Server struct {
 }
 
 func NewServer(config config.Config) *Server {
+	log.Println(config)
+
 	return &Server{
 		config: config,
 	}
@@ -30,6 +32,7 @@ func (server *Server) selectStorage() storage.MetricStorager {
 	storageConfig := server.config.Store
 
 	if storageConfig.DatabaseDSN != "" {
+		log.Println("DB Storage")
 		repository, err := storage.NewDBRepo(storageConfig)
 		if err != nil {
 			panic(err)
@@ -38,6 +41,7 @@ func (server *Server) selectStorage() storage.MetricStorager {
 		return repository
 	}
 
+	log.Println("File Storage")
 	repository := storage.NewMetricsMemoryRepo(storageConfig)
 	if server.config.Store.Restore {
 		repository.InitFromFile()

@@ -33,10 +33,9 @@ func (config *Config) initDefaultValues() {
 	config.ServerAddr = "127.0.0.1:8080"
 	config.TemplatesAbsPath = "./templates"
 	config.Store = StoreConfig{
-		Interval:    time.Duration(300) * time.Second,
-		DatabaseDSN: "",
-		File:        "/tmp/devops-metrics-db.json",
-		Restore:     true,
+		Interval: time.Duration(300) * time.Second,
+		File:     "/tmp/devops-metrics-db.json",
+		Restore:  true,
 	}
 }
 
