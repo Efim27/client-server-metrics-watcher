@@ -134,7 +134,7 @@ func UpdateNotImplementedPost(rw http.ResponseWriter, request *http.Request) {
 }
 
 func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager, templatesPath string) {
-	t, err := template.ParseFiles(templatesPath)
+	t, err := template.ParseFiles(templatesPath + "/index.html")
 	if err != nil {
 		log.Println("Cant parse template ", err)
 		return

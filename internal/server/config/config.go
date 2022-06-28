@@ -31,7 +31,7 @@ func newConfig() *Config {
 
 func (config *Config) initDefaultValues() {
 	config.ServerAddr = "127.0.0.1:8080"
-	config.TemplatesAbsPath = "./templates/index.html"
+	config.TemplatesAbsPath = "./templates"
 	config.Store = StoreConfig{
 		Interval:    time.Duration(300) * time.Second,
 		DatabaseDSN: "",
@@ -56,6 +56,12 @@ func (config *Config) parseFlags() {
 	flag.Parse()
 }
 
+func (config *Config) handlePriority() {
+	if config.Store.DatabaseDSN != "" {
+		config.Store.File = ""
+	}
+}
+
 func LoadConfig() Config {
 	config := newConfig()
 
@@ -65,5 +71,6 @@ func LoadConfig() Config {
 		log.Fatal(err)
 	}
 
+	config.handlePriority()
 	return *config
 }
