@@ -70,6 +70,5 @@ func LoadConfig() Config {
 		log.Fatal(err)
 	}
 
-	config.handlePriority()
 	return *config
 }
