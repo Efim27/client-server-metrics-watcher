@@ -60,3 +60,7 @@ func (m MemoryRepo) GetSchemaDump() map[string]MetricValue {
 func (m *MemoryRepo) Close() error {
 	return nil
 }
+
+func (m MemoryRepo) Ping() error {
+	return nil
+}

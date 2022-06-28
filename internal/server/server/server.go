@@ -49,6 +49,10 @@ func (server *Server) initRouter() {
 		handlers.PrintStatsValues(writer, request, server.storage, server.config.TemplatesAbsPath)
 	})
 
+	router.Get("/ping", func(writer http.ResponseWriter, request *http.Request) {
+		handlers.PingGet(writer, request, server.storage)
+	})
+
 	//json handler
 	router.Post("/value/", func(writer http.ResponseWriter, request *http.Request) {
 		handlers.JSONStatValue(writer, request, server.storage, server.config.SignKey)

@@ -12,4 +12,5 @@ type MetricStorager interface {
 	Read(key string, metricType string) (MetricValue, error)
 	ReadAll() map[string]MetricMap
 	Close() error
+	Ping() error
 }

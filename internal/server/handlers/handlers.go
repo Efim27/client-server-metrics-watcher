@@ -215,3 +215,16 @@ func PrintStatValue(rw http.ResponseWriter, request *http.Request, metricsMemory
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte(metric.GetStringValue()))
 }
+
+func PingGet(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
+	response := responses.NewDefaultResponse()
+	pingError := metricsMemoryRepo.Ping()
+
+	if pingError != nil {
+		http.Error(rw, response.SetStatusError(pingError).GetJSONString(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	rw.Write(response.GetJSONBytes())
+}
