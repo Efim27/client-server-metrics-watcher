@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"metrics/internal/server/config"
 )
@@ -21,7 +21,7 @@ func NewDBRepo(config config.StoreConfig) (DBRepo, error) {
 	var repository DBRepo
 	repository.config = config
 
-	db, err := sql.Open("sqlite",
+	db, err := sql.Open("pgx",
 		repository.config.DatabaseDSN)
 	if err != nil {
 		return DBRepo{}, err
