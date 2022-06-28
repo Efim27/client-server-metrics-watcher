@@ -190,10 +190,6 @@ func (metricsMemoryRepo MetricsMemoryRepo) IterativeUploadToFile() error {
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
-	if metricsMemoryRepo.config.File == "" {
-		return
-	}
-
 	file, err := os.OpenFile(metricsMemoryRepo.config.File, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
 		panic(err.Error())

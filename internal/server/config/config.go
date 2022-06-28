@@ -55,12 +55,6 @@ func (config *Config) parseFlags() {
 	flag.Parse()
 }
 
-func (config *Config) handlePriority() {
-	if config.Store.DatabaseDSN != "" {
-		config.Store.File = ""
-	}
-}
-
 func LoadConfig() Config {
 	config := newConfig()
 
