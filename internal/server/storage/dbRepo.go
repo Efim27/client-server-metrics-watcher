@@ -110,7 +110,7 @@ func (repository DBRepo) readCounter(key string) (MetricValue, error) {
 		MType: MeticTypeCounter,
 	}
 
-	err := repository.db.QueryRow("SELECT value FROM counter WHERE name = $1", key).Scan(&metricValue.Value)
+	err := repository.db.QueryRow("SELECT value FROM counter WHERE name = $1", key).Scan(&metricValue.Delta)
 	if err != nil {
 		return metricValue, fmt.Errorf("counter select error : %w", err)
 	}
