@@ -32,9 +32,17 @@ func NewDBRepo(config config.StoreConfig) (DBRepo, error) {
 	}
 	repository.db = db
 
+	repository.PrepareDB()
 	repository.InitTables()
 
 	return repository, nil
+}
+
+func (repository DBRepo) PrepareDB() {
+	repository.db.SetMaxOpenConns(20)
+	repository.db.SetMaxIdleConns(20)
+	repository.db.SetConnMaxIdleTime(time.Second * 30)
+	repository.db.SetConnMaxLifetime(time.Minute * 2)
 }
 
 func (repository DBRepo) InitTables() error {
