@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -28,7 +29,23 @@ func NewDBRepo(config config.StoreConfig) (DBRepo, error) {
 	}
 	repository.db = db
 
+	repository.InitTables()
+
 	return repository, nil
+}
+
+func (repository DBRepo) InitTables() error {
+	_, err := repository.db.Exec("CREATE TABLE IF NOT EXISTS counter (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value BIGINT NOT NULL)")
+	if err != nil {
+		return fmt.Errorf("failed to create counter table: %w", err)
+	}
+
+	_, err = repository.db.Exec("CREATE TABLE IF NOT EXISTS gauge (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value DOUBLE PRECISION NOT NULL)")
+	if err != nil {
+		return fmt.Errorf("failed to create gauge table: %w", err)
+	}
+
+	return nil
 }
 
 func (repository DBRepo) Update(key string, newMetricValue MetricValue) error {
@@ -53,11 +70,13 @@ func (repository DBRepo) Update(key string, newMetricValue MetricValue) error {
 }
 
 func (repository DBRepo) updateGauge(key string, newMetricValue MetricValue) error {
-	return nil
+	_, err := repository.db.Exec("INSERT INTO gauge (name, value) VALUES ($1, $2) ON CONFLICT(name) DO UPDATE set value = $2", key, *newMetricValue.Value)
+	return err
 }
 
 func (repository DBRepo) updateCounter(key string, newMetricValue MetricValue) error {
-	return nil
+	_, err := repository.db.Exec("INSERT INTO counter (name, value) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET value = counter.value + $2", key, *newMetricValue.Delta)
+	return err
 }
 
 func (repository DBRepo) Read(key string, metricType string) (MetricValue, error) {
@@ -72,11 +91,27 @@ func (repository DBRepo) Read(key string, metricType string) (MetricValue, error
 }
 
 func (repository DBRepo) readGauge(key string) (MetricValue, error) {
-	return MetricValue{}, errors.New("not found")
+	metricValue := MetricValue{
+		MType: MeticTypeGauge,
+	}
+
+	err := repository.db.QueryRow("SELECT value FROM gauge WHERE name = $1", key).Scan(&metricValue.Value)
+	if err != nil {
+		return metricValue, fmt.Errorf("gauge select error : %w", err)
+	}
+	return metricValue, nil
 }
 
 func (repository DBRepo) readCounter(key string) (MetricValue, error) {
-	return MetricValue{}, errors.New("not found")
+	metricValue := MetricValue{
+		MType: MeticTypeCounter,
+	}
+
+	err := repository.db.QueryRow("SELECT value FROM counter WHERE name = $1", key).Scan(&metricValue.Value)
+	if err != nil {
+		return metricValue, fmt.Errorf("counter select error : %w", err)
+	}
+	return metricValue, nil
 }
 
 func (repository DBRepo) InitStateValues(DBSchema map[string]MetricValue) {
