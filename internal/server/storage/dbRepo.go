@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -156,7 +155,7 @@ func (repository DBRepo) readCounter(key string) (MetricValue, error) {
 	return metricValue, nil
 }
 
-func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) error {
+func (repository DBRepo) UpdateManySliceMetric(MetricBatch []Metric) error {
 	tx, err := repository.db.Begin()
 	if err != nil {
 		return err
@@ -175,7 +174,7 @@ func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) error {
 	}
 	defer stmtCounterGauge.Close()
 
-	for metricKey, metricValue := range DBSchema {
+	for _, metricValue := range MetricBatch {
 		var stmtMetric *sql.Stmt
 		if metricValue.MType == MeticTypeGauge {
 			stmtMetric = stmtUpdateGauge
@@ -183,7 +182,7 @@ func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) error {
 			stmtMetric = stmtCounterGauge
 		}
 
-		err = repository.UpdateTX(metricKey, metricValue, stmtMetric)
+		err = repository.UpdateTX(metricValue.ID, metricValue.MetricValue, stmtMetric)
 
 		if err != nil {
 			return err
@@ -191,6 +190,19 @@ func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) error {
 	}
 
 	return tx.Commit()
+}
+
+func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) error {
+	MetricBatch := []Metric{}
+
+	for metricKey, metricValue := range DBSchema {
+		MetricBatch = append(MetricBatch, Metric{
+			ID:          metricKey,
+			MetricValue: metricValue,
+		})
+	}
+
+	return repository.UpdateManySliceMetric(MetricBatch)
 }
 
 func (repository DBRepo) readAllCounter() (map[string]MetricValue, error) {
@@ -262,7 +274,6 @@ func (repository DBRepo) ReadAll() map[string]MetricMap {
 	AllValues := map[string]MetricMap{}
 
 	AllValues[MeticTypeCounter], err = repository.readAllCounter()
-	log.Println(AllValues[MeticTypeCounter])
 	if err != nil {
 		return AllValues
 	}

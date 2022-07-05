@@ -204,6 +204,19 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
 	}
 }
 
+func (metricsMemoryRepo MetricsMemoryRepo) UpdateManySliceMetric(MetricBatch []Metric) error {
+	MetricValueBatch := MetricMap{}
+	for _, OneMetric := range MetricBatch {
+		MetricValueBatch[OneMetric.ID] = MetricValue{
+			MType: OneMetric.MType,
+			Delta: OneMetric.Delta,
+			Value: OneMetric.Value,
+		}
+	}
+
+	return metricsMemoryRepo.UpdateMany(MetricValueBatch)
+}
+
 func (metricsMemoryRepo MetricsMemoryRepo) UpdateMany(DBSchema map[string]MetricValue) error {
 	for metricKey, metricValue := range DBSchema {
 		err := metricsMemoryRepo.Update(metricKey, metricValue)
@@ -212,7 +225,7 @@ func (metricsMemoryRepo MetricsMemoryRepo) UpdateMany(DBSchema map[string]Metric
 			return err
 		}
 	}
-	
+
 	return nil
 }
 

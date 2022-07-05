@@ -72,7 +72,6 @@ func (server Server) UpdateMetricBatchJSON(rw http.ResponseWriter, request *http
 	rw.Header().Set("Content-Type", "application/json")
 
 	var MetricBatch []storage.Metric
-	MetricValueBatch := storage.MetricMap{}
 	response := responses.NewUpdateMetricResponse()
 
 	//JSON decoding
@@ -89,15 +88,9 @@ func (server Server) UpdateMetricBatchJSON(rw http.ResponseWriter, request *http
 			http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
 			return
 		}
-
-		MetricValueBatch[OneMetric.ID] = storage.MetricValue{
-			MType: OneMetric.MType,
-			Delta: OneMetric.Delta,
-			Value: OneMetric.Value,
-		}
 	}
 
-	err = server.storage.UpdateMany(MetricValueBatch)
+	err = server.storage.UpdateManySliceMetric(MetricBatch)
 	if err != nil {
 		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
 		return
