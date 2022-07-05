@@ -64,16 +64,14 @@ func (server *Server) initRouter() {
 	router.Use(chimiddleware.Recoverer)
 	router.Use(middleware.GzipHandle)
 
-	//json handler
-	router.Post("/value/", server.JSONStatValue)
+	router.Post("/value/", server.MetricValuePostJSON)
 
-	router.Get("/", server.PrintStatsValues)
-	router.Get("/ping", server.PingGet)
-	router.Get("/value/{statType}/{statName}", server.PrintStatValue)
+	router.Get("/", server.PrintAllMetricStatic)
+	router.Get("/ping", server.PingGetJSON)
+	router.Get("/value/{statType}/{statName}", server.PrintMetricGet)
 
 	router.Route("/update/", func(router chi.Router) {
-		//json handler
-		router.Post("/", server.UpdateStatJSONPost)
+		router.Post("/", server.UpdateMetricPostJSON)
 
 		router.Post("/gauge/{statName}/{statValue}", server.UpdateGaugePost)
 		router.Post("/counter/{statName}/{statValue}", server.UpdateCounterPost)
