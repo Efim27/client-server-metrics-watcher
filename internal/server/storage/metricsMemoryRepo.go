@@ -204,10 +204,16 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
 	}
 }
 
-func (metricsMemoryRepo MetricsMemoryRepo) UpdateMany(DBSchema map[string]MetricValue) {
+func (metricsMemoryRepo MetricsMemoryRepo) UpdateMany(DBSchema map[string]MetricValue) error {
 	for metricKey, metricValue := range DBSchema {
-		metricsMemoryRepo.Update(metricKey, metricValue)
+		err := metricsMemoryRepo.Update(metricKey, metricValue)
+
+		if err != nil {
+			return err
+		}
 	}
+	
+	return nil
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) ReadAll() map[string]MetricMap {

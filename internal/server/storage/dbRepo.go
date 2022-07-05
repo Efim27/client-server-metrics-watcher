@@ -117,10 +117,16 @@ func (repository DBRepo) readCounter(key string) (MetricValue, error) {
 	return metricValue, nil
 }
 
-func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) {
+func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) error {
 	for metricKey, metricValue := range DBSchema {
-		repository.Update(metricKey, metricValue)
+		err := repository.Update(metricKey, metricValue)
+
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func (repository DBRepo) readAllCounter() (map[string]MetricValue, error) {

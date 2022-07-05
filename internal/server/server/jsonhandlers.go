@@ -68,7 +68,47 @@ func (server Server) UpdateMetricPostJSON(rw http.ResponseWriter, request *http.
 	rw.Write(response.SetHash(hex.EncodeToString(metricHash)).GetJSONBytes())
 }
 
+func (server Server) UpdateMetricBatchJSON(rw http.ResponseWriter, request *http.Request) {
+	rw.Header().Set("Content-Type", "application/json")
+
+	var MetricBatch []storage.Metric
+	MetricValueBatch := storage.MetricMap{}
+	response := responses.NewUpdateMetricResponse()
+
+	//JSON decoding
+	err := json.NewDecoder(request.Body).Decode(&MetricBatch)
+	if err != nil {
+		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
+		return
+	}
+
+	//Validation
+	for _, OneMetric := range MetricBatch {
+		_, err = govalidator.ValidateStruct(OneMetric)
+		if err != nil {
+			http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
+			return
+		}
+
+		MetricValueBatch[OneMetric.ID] = storage.MetricValue{
+			MType: OneMetric.MType,
+			Delta: OneMetric.Delta,
+			Value: OneMetric.Value,
+		}
+	}
+
+	err = server.storage.UpdateMany(MetricValueBatch)
+	if err != nil {
+		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	rw.Write(response.GetJSONBytes())
+}
+
 func (server Server) MetricValuePostJSON(rw http.ResponseWriter, request *http.Request) {
+	rw.Header().Set("Content-Type", "application/json")
 	var InputMetricsJSON struct {
 		ID    string `json:"id" valid:"required"`
 		MType string `json:"type" valid:"required,in(counter|gauge)"`
@@ -110,7 +150,6 @@ func (server Server) MetricValuePostJSON(rw http.ResponseWriter, request *http.R
 		answerJSON.Hash = hex.EncodeToString(answerJSON.Metric.GetHash(InputMetricsJSON.ID, server.config.SignKey))
 	}
 
-	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(rw).Encode(answerJSON)
 	if err != nil {
