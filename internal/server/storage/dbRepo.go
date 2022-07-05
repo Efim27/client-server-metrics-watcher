@@ -80,13 +80,44 @@ func (repository DBRepo) Update(key string, newMetricValue MetricValue) error {
 	}
 }
 
+func (repository DBRepo) UpdateTX(key string, newMetricValue MetricValue, stmt *sql.Stmt) error {
+	switch newMetricValue.MType {
+	case MeticTypeGauge:
+		if newMetricValue.Value == nil {
+			return errors.New("Metric Value is empty")
+		}
+		newMetricValue.Delta = nil
+
+		return repository.updateGaugeTX(key, newMetricValue, stmt)
+	case MeticTypeCounter:
+		if newMetricValue.Delta == nil {
+			return errors.New("Metric Delta is empty")
+		}
+		newMetricValue.Value = nil
+
+		return repository.updateCounterTX(key, newMetricValue, stmt)
+	default:
+		return errors.New("Metric type is not defined")
+	}
+}
+
 func (repository DBRepo) updateGauge(key string, newMetricValue MetricValue) error {
 	_, err := repository.db.Exec("INSERT INTO gauge (name, value) VALUES ($1, $2) ON CONFLICT(name) DO UPDATE set value = $2", key, *newMetricValue.Value)
 	return err
 }
 
+func (repository DBRepo) updateGaugeTX(key string, newMetricValue MetricValue, stmt *sql.Stmt) error {
+	_, err := stmt.Exec(key, *newMetricValue.Value)
+	return err
+}
+
 func (repository DBRepo) updateCounter(key string, newMetricValue MetricValue) error {
 	_, err := repository.db.Exec("INSERT INTO counter (name, value) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET value = counter.value + $2", key, *newMetricValue.Delta)
+	return err
+}
+
+func (repository DBRepo) updateCounterTX(key string, newMetricValue MetricValue, stmt *sql.Stmt) error {
+	_, err := stmt.Exec(key, *newMetricValue.Delta)
 	return err
 }
 
@@ -126,15 +157,40 @@ func (repository DBRepo) readCounter(key string) (MetricValue, error) {
 }
 
 func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) error {
+	tx, err := repository.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmtUpdateGauge, err := tx.Prepare("INSERT INTO gauge (name, value) VALUES ($1, $2) ON CONFLICT(name) DO UPDATE set value = $2")
+	if err != nil {
+		return err
+	}
+	defer stmtUpdateGauge.Close()
+
+	stmtCounterGauge, err := tx.Prepare("INSERT INTO counter (name, value) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET value = counter.value + $2")
+	if err != nil {
+		return err
+	}
+	defer stmtCounterGauge.Close()
+
 	for metricKey, metricValue := range DBSchema {
-		err := repository.Update(metricKey, metricValue)
+		var stmtMetric *sql.Stmt
+		if metricValue.MType == MeticTypeGauge {
+			stmtMetric = stmtUpdateGauge
+		} else {
+			stmtMetric = stmtCounterGauge
+		}
+
+		err = repository.UpdateTX(metricKey, metricValue, stmtMetric)
 
 		if err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (repository DBRepo) readAllCounter() (map[string]MetricValue, error) {
