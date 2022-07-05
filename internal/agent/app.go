@@ -50,7 +50,7 @@ func (app *AppHTTP) Run() {
 			app.timeLog.lastUploadTime = timeTickerUpload
 			log.Println("Upload")
 
-			err := app.metricsUplader.MetricsUpload(metricsDump)
+			err := app.metricsUplader.MetricsUploadBatch(metricsDump)
 			if err != nil {
 				log.Println("Error!")
 				log.Println(err)

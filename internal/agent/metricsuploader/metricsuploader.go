@@ -22,6 +22,31 @@ type MetricsUplader struct {
 	signKey string
 }
 
+func newMetricValue(mtype string, value string) (storage.MetricValue, error) {
+	mValue := storage.MetricValue{
+		MType: mtype,
+	}
+
+	var err error
+	switch mtype {
+	case storage.MeticTypeCounter:
+		var metricValue int64
+		metricValue, err = strconv.ParseInt(value, 10, 64)
+		mValue.Delta = &metricValue
+	case storage.MeticTypeGauge:
+		var metricValue float64
+		metricValue, err = strconv.ParseFloat(value, 64)
+		mValue.Value = &metricValue
+	default:
+		return mValue, errors.New("unknown statType")
+	}
+	if err != nil {
+		return mValue, errors.New("invalid statValue")
+	}
+
+	return mValue, nil
+}
+
 func NewMetricsUploader(config config.HTTPClientConfig, signKey string) *MetricsUplader {
 	var metricsUplader MetricsUplader
 	metricsUplader.config = config
@@ -58,34 +83,20 @@ func (metricsUplader *MetricsUplader) oneStatUpload(statType string, statName st
 	return nil
 }
 
-func (metricsUplader *MetricsUplader) oneStatUploadJSON(statType string, statName string, statValue string) error {
+func (metricsUplader *MetricsUplader) oneStatUploadJSON(mType string, name string, value string) error {
+	metricValue, err := newMetricValue(mType, value)
+	if err != nil {
+		return nil
+	}
+
 	OneMetrics := struct {
 		storage.Metric
 		Hash string `json:"hash"`
 	}{
 		Metric: storage.Metric{
-			ID: statName,
-			MetricValue: storage.MetricValue{
-				MType: statType,
-			},
+			ID:          name,
+			MetricValue: metricValue,
 		},
-	}
-
-	var err error
-	switch OneMetrics.MType {
-	case storage.MeticTypeCounter:
-		var metricValue int64
-		metricValue, err = strconv.ParseInt(statValue, 10, 64)
-		OneMetrics.Delta = &metricValue
-	case storage.MeticTypeGauge:
-		var metricValue float64
-		metricValue, err = strconv.ParseFloat(statValue, 64)
-		OneMetrics.Value = &metricValue
-	default:
-		return errors.New("unknown statType")
-	}
-	if err != nil {
-		return errors.New("invalid statValue")
 	}
 
 	if metricsUplader.signKey != "" {
@@ -121,15 +132,59 @@ func (metricsUplader *MetricsUplader) MetricsUpload(metricsDump statsreader.Metr
 	errorGroup := new(errgroup.Group)
 
 	for i := 0; i < reflectMetricsDump.NumField(); i++ {
-		statName := typeOfMetricsDump.Field(i).Name
-		statValue := fmt.Sprintf("%v", reflectMetricsDump.Field(i).Interface())
-		statType := strings.Split(typeOfMetricsDump.Field(i).Type.String(), ".")[1]
+		metricName := typeOfMetricsDump.Field(i).Name
+		metricValue := fmt.Sprintf("%v", reflectMetricsDump.Field(i).Interface())
+		metricType := strings.Split(typeOfMetricsDump.Field(i).Type.String(), ".")[1]
 
 		errorGroup.Go(func() error {
-			return metricsUplader.oneStatUploadJSON(statType, statName, statValue)
+			return metricsUplader.oneStatUploadJSON(metricType, metricName, metricValue)
 		})
 	}
 
 	err := errorGroup.Wait()
 	return err
+}
+
+func (metricsUplader *MetricsUplader) MetricsUploadBatch(metricsDump statsreader.MetricsDump) error {
+	reflectMetricsDump := reflect.ValueOf(metricsDump)
+	typeOfMetricsDump := reflectMetricsDump.Type()
+	MetricValueBatch := []storage.Metric{}
+
+	for i := 0; i < reflectMetricsDump.NumField(); i++ {
+		metricName := typeOfMetricsDump.Field(i).Name
+		metricValue := fmt.Sprintf("%v", reflectMetricsDump.Field(i).Interface())
+		metricType := strings.Split(typeOfMetricsDump.Field(i).Type.String(), ".")[1]
+
+		mValue, err := newMetricValue(metricType, metricValue)
+		if err != nil {
+			return err
+		}
+
+		MetricValueBatch = append(MetricValueBatch, storage.Metric{
+			ID:          metricName,
+			MetricValue: mValue,
+		})
+	}
+
+	statJSON, err := json.Marshal(MetricValueBatch)
+	if err != nil {
+		return err
+	}
+
+	resp, err := metricsUplader.client.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(string(statJSON)).
+		SetPathParams(map[string]string{
+			"addr": metricsUplader.config.ServerAddr,
+		}).
+		Post("http://{addr}/updates/")
+
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode() != 200 {
+		return fmt.Errorf("HTTP Status: %v (not 200)", resp.StatusCode())
+	}
+
+	return nil
 }
