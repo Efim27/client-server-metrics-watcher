@@ -117,7 +117,7 @@ func (repository DBRepo) readCounter(key string) (MetricValue, error) {
 	return metricValue, nil
 }
 
-func (repository DBRepo) InitStateValues(DBSchema map[string]MetricValue) {
+func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) {
 	for metricKey, metricValue := range DBSchema {
 		repository.Update(metricKey, metricValue)
 	}
@@ -231,6 +231,6 @@ func (repository DBRepo) InitFromFile() {
 	json.NewDecoder(file).Decode(&metricsDump)
 
 	for _, metricList := range metricsDump {
-		repository.InitStateValues(metricList)
+		repository.UpdateMany(metricList)
 	}
 }

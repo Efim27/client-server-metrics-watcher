@@ -200,11 +200,11 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
 	json.NewDecoder(file).Decode(&metricsDump)
 
 	for _, metricList := range metricsDump {
-		metricsMemoryRepo.InitStateValues(metricList)
+		metricsMemoryRepo.UpdateMany(metricList)
 	}
 }
 
-func (metricsMemoryRepo MetricsMemoryRepo) InitStateValues(DBSchema map[string]MetricValue) {
+func (metricsMemoryRepo MetricsMemoryRepo) UpdateMany(DBSchema map[string]MetricValue) {
 	for metricKey, metricValue := range DBSchema {
 		metricsMemoryRepo.Update(metricKey, metricValue)
 	}
