@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"crypto/hmac"
@@ -17,7 +17,7 @@ import (
 )
 
 //UpdateStatJSONPost update stat via json
-func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager, SignKey string) {
+func (server Server) UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 
 	inputJSON := struct {
@@ -48,14 +48,14 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMe
 
 	//Check sign
 	var metricHash []byte
-	if SignKey != "" {
+	if server.config.SignKey != "" {
 		requestMetricHash, err := hex.DecodeString(inputJSON.Hash)
 		if err != nil {
 			http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
 			return
 		}
 
-		metricHash = newMetricValue.GetHash(inputJSON.ID, SignKey)
+		metricHash = newMetricValue.GetHash(inputJSON.ID, server.config.SignKey)
 		if !hmac.Equal(requestMetricHash, metricHash) {
 			http.Error(rw, response.SetStatusError(errors.New("invalid hash")).GetJSONString(), http.StatusBadRequest)
 			return
@@ -63,7 +63,7 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMe
 	}
 
 	//Update value
-	err = metricsMemoryRepo.Update(inputJSON.ID, newMetricValue)
+	err = server.storage.Update(inputJSON.ID, newMetricValue)
 	if err != nil {
 		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)
 		return
@@ -73,7 +73,7 @@ func UpdateStatJSONPost(rw http.ResponseWriter, request *http.Request, metricsMe
 	rw.Write(response.SetHash(hex.EncodeToString(metricHash)).GetJSONBytes())
 }
 
-func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
+func (server Server) UpdateGaugePost(rw http.ResponseWriter, request *http.Request) {
 	statName := chi.URLParam(request, "statName")
 	statValue := chi.URLParam(request, "statValue")
 	statValueFloat, err := strconv.ParseFloat(statValue, 64)
@@ -84,7 +84,7 @@ func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, metricsMemor
 		return
 	}
 
-	err = metricsMemoryRepo.Update(statName, storage.MetricValue{
+	err = server.storage.Update(statName, storage.MetricValue{
 		MType: storage.MeticTypeGauge,
 		Value: &statValueFloat,
 	})
@@ -100,7 +100,7 @@ func UpdateGaugePost(rw http.ResponseWriter, request *http.Request, metricsMemor
 	rw.Write([]byte("Ok"))
 }
 
-func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
+func (server Server) UpdateCounterPost(rw http.ResponseWriter, request *http.Request) {
 	statName := chi.URLParam(request, "statName")
 	statValue := chi.URLParam(request, "statValue")
 	statValueInt, err := strconv.ParseInt(statValue, 10, 64)
@@ -110,7 +110,7 @@ func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, metricsMem
 		return
 	}
 
-	err = metricsMemoryRepo.Update(statName, storage.MetricValue{
+	err = server.storage.Update(statName, storage.MetricValue{
 		MType: storage.MeticTypeCounter,
 		Delta: &statValueInt,
 	})
@@ -126,22 +126,22 @@ func UpdateCounterPost(rw http.ResponseWriter, request *http.Request, metricsMem
 	rw.Write([]byte("Ok"))
 }
 
-func UpdateNotImplementedPost(rw http.ResponseWriter, request *http.Request) {
+func (server Server) UpdateNotImplementedPost(rw http.ResponseWriter, request *http.Request) {
 	log.Println("Update not implemented statType")
 
 	rw.WriteHeader(http.StatusNotImplemented)
 	rw.Write([]byte("Not implemented"))
 }
 
-func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager, templatesPath string) {
-	t, err := template.ParseFiles(templatesPath + "/index.html")
+func (server Server) PrintStatsValues(rw http.ResponseWriter, request *http.Request) {
+	t, err := template.ParseFiles(server.config.TemplatesAbsPath + "/index.html")
 	if err != nil {
 		log.Println("Cant parse template ", err)
 		return
 	}
 
 	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err = t.Execute(rw, metricsMemoryRepo.ReadAll())
+	err = t.Execute(rw, server.storage.ReadAll())
 	if err != nil {
 		log.Println("Cant render template ", err)
 		return
@@ -149,7 +149,7 @@ func PrintStatsValues(rw http.ResponseWriter, request *http.Request, metricsMemo
 }
 
 //JSONStatValue get stat value via json
-func JSONStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager, SignKey string) {
+func (server Server) JSONStatValue(rw http.ResponseWriter, request *http.Request) {
 	var InputMetricsJSON struct {
 		ID    string `json:"id" valid:"required"`
 		MType string `json:"type" valid:"required,in(counter|gauge)"`
@@ -167,7 +167,7 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryR
 		return
 	}
 
-	statValue, err := metricsMemoryRepo.Read(InputMetricsJSON.ID, InputMetricsJSON.MType)
+	statValue, err := server.storage.Read(InputMetricsJSON.ID, InputMetricsJSON.MType)
 	if err != nil {
 		http.Error(rw, "Unknown statName", http.StatusNotFound)
 		return
@@ -187,8 +187,8 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryR
 		},
 	}
 
-	if SignKey != "" {
-		answerJSON.Hash = hex.EncodeToString(answerJSON.Metric.GetHash(InputMetricsJSON.ID, SignKey))
+	if server.config.SignKey != "" {
+		answerJSON.Hash = hex.EncodeToString(answerJSON.Metric.GetHash(InputMetricsJSON.ID, server.config.SignKey))
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
@@ -200,11 +200,11 @@ func JSONStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryR
 	}
 }
 
-func PrintStatValue(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
+func (server Server) PrintStatValue(rw http.ResponseWriter, request *http.Request) {
 	statType := chi.URLParam(request, "statType")
 	statName := chi.URLParam(request, "statName")
 
-	metric, err := metricsMemoryRepo.Read(statName, statType)
+	metric, err := server.storage.Read(statName, statType)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotFound)
 		rw.Write([]byte("Unknown statName"))
@@ -216,10 +216,10 @@ func PrintStatValue(rw http.ResponseWriter, request *http.Request, metricsMemory
 	rw.Write([]byte(metric.GetStringValue()))
 }
 
-func PingGet(rw http.ResponseWriter, request *http.Request, metricsMemoryRepo storage.MetricStorager) {
+func (server Server) PingGet(rw http.ResponseWriter, request *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	response := responses.NewDefaultResponse()
-	pingError := metricsMemoryRepo.Ping()
+	pingError := server.storage.Ping()
 
 	if pingError != nil {
 		http.Error(rw, response.SetStatusError(pingError).GetJSONString(), http.StatusInternalServerError)
