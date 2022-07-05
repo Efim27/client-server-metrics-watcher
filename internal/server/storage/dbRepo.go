@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -120,8 +121,86 @@ func (repository DBRepo) InitStateValues(DBSchema map[string]MetricValue) {
 	}
 }
 
+func (repository DBRepo) readAllCounter() (map[string]MetricValue, error) {
+	allValues := map[string]MetricValue{}
+
+	rows, err := repository.db.Query("SELECT name, value from counter")
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var vKey string
+		v := MetricValue{
+			MType: MeticTypeCounter,
+		}
+
+		err = rows.Scan(&vKey, &v.Delta)
+		if err != nil {
+			return nil, err
+		}
+
+		allValues[vKey] = v
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return allValues, nil
+}
+
+func (repository DBRepo) readAllGauge() (map[string]MetricValue, error) {
+	allValues := map[string]MetricValue{}
+
+	rows, err := repository.db.Query("SELECT name, value from gauge")
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var vKey string
+		v := MetricValue{
+			MType: MeticTypeGauge,
+		}
+
+		err = rows.Scan(&vKey, &v.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		allValues[vKey] = v
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return allValues, nil
+}
+
 func (repository DBRepo) ReadAll() map[string]MetricMap {
-	return map[string]MetricMap{}
+	var err error
+	AllValues := map[string]MetricMap{}
+
+	AllValues[MeticTypeCounter], err = repository.readAllCounter()
+	log.Println(AllValues[MeticTypeCounter])
+	if err != nil {
+		return AllValues
+	}
+
+	AllValues[MeticTypeGauge], err = repository.readAllGauge()
+	if err != nil {
+		return AllValues
+	}
+
+	return AllValues
 }
 
 func (repository DBRepo) Close() error {
