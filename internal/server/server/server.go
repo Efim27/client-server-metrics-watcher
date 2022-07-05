@@ -43,15 +43,17 @@ func (server *Server) selectStorage() storage.MetricStorager {
 
 	log.Println("Memory Storage")
 	repository := storage.NewMetricsMemoryRepo(storageConfig)
-	if server.config.Store.Restore {
-		repository.InitFromFile()
-	}
+
 	return repository
 }
 
 func (server *Server) initStorage() {
 	metricsMemoryRepo := server.selectStorage()
 	server.storage = metricsMemoryRepo
+
+	if server.config.Store.Restore {
+		server.storage.InitFromFile()
+	}
 }
 
 func (server *Server) initRouter() {

@@ -3,9 +3,11 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -216,4 +218,19 @@ func (repository DBRepo) Ping() error {
 		return err
 	}
 	return nil
+}
+
+func (repository DBRepo) InitFromFile() {
+	file, err := os.OpenFile(repository.config.File, os.O_RDONLY|os.O_CREATE, 0777)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer file.Close()
+
+	var metricsDump map[string]MetricMap
+	json.NewDecoder(file).Decode(&metricsDump)
+
+	for _, metricList := range metricsDump {
+		repository.InitStateValues(metricList)
+	}
 }
