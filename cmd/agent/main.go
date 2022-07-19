@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	config := config.LoadConfig()
-	app := agent.NewHTTPClient(config)
+	appConfig := config.LoadConfig()
+	app := agent.NewHTTPClient(appConfig)
 	app.Run()
 }

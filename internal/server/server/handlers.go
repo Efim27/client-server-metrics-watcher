@@ -62,7 +62,7 @@ func (server Server) UpdateCounterPost(rw http.ResponseWriter, request *http.Req
 	rw.Write([]byte("Ok"))
 }
 
-func (server Server) UpdateNotImplementedPost(rw http.ResponseWriter, request *http.Request) {
+func (server Server) UpdateNotImplementedPost(rw http.ResponseWriter, _ *http.Request) {
 	log.Println("Update not implemented statType")
 
 	rw.WriteHeader(http.StatusNotImplemented)

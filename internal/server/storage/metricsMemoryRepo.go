@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -91,20 +92,20 @@ func (metricsMemoryRepo MetricsMemoryRepo) Update(key string, newMetricValue Met
 	switch newMetricValue.MType {
 	case MeticTypeGauge:
 		if newMetricValue.Value == nil {
-			return errors.New("Metric Value is empty")
+			return errors.New("metric Value is empty")
 		}
 		newMetricValue.Delta = nil
 
 		return metricsMemoryRepo.updateGaugeValue(key, newMetricValue)
 	case MeticTypeCounter:
 		if newMetricValue.Delta == nil {
-			return errors.New("Metric Delta is empty")
+			return errors.New("metric Delta is empty")
 		}
 		newMetricValue.Value = nil
 
 		return metricsMemoryRepo.updateCounterValue(key, newMetricValue)
 	default:
-		return errors.New("Metric type is not defined")
+		return errors.New("metric type is not defined")
 	}
 }
 
@@ -177,16 +178,17 @@ func (metricsMemoryRepo MetricsMemoryRepo) UploadToFile() error {
 	return nil
 }
 
-func (metricsMemoryRepo MetricsMemoryRepo) IterativeUploadToFile() error {
+func (metricsMemoryRepo MetricsMemoryRepo) IterativeUploadToFile() {
 	tickerUpload := time.NewTicker(metricsMemoryRepo.config.Interval)
 
 	go func() {
 		for range tickerUpload.C {
-			metricsMemoryRepo.UploadToFile()
+			err := metricsMemoryRepo.UploadToFile()
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}()
-
-	return nil
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
@@ -197,24 +199,29 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
 	defer file.Close()
 
 	var metricsDump map[string]MetricMap
-	json.NewDecoder(file).Decode(&metricsDump)
+	err = json.NewDecoder(file).Decode(&metricsDump)
+	if err != nil {
+		panic(err)
+	}
 
 	for _, metricList := range metricsDump {
-		metricsMemoryRepo.UpdateMany(metricList)
+		err = metricsMemoryRepo.UpdateMany(metricList)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) UpdateManySliceMetric(MetricBatch []Metric) error {
-	MetricValueBatch := MetricMap{}
-	for _, OneMetric := range MetricBatch {
-		MetricValueBatch[OneMetric.ID] = MetricValue{
-			MType: OneMetric.MType,
-			Delta: OneMetric.Delta,
-			Value: OneMetric.Value,
+	for _, metricValue := range MetricBatch {
+		err := metricsMemoryRepo.Update(metricValue.ID, metricValue.MetricValue)
+
+		if err != nil {
+			return err
 		}
 	}
 
-	return metricsMemoryRepo.UpdateMany(MetricValueBatch)
+	return nil
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) UpdateMany(DBSchema map[string]MetricValue) error {

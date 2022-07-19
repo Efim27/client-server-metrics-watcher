@@ -151,7 +151,7 @@ func (server Server) MetricValuePostJSON(rw http.ResponseWriter, request *http.R
 	}
 }
 
-func (server Server) PingGetJSON(rw http.ResponseWriter, request *http.Request) {
+func (server Server) PingGetJSON(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	response := responses.NewDefaultResponse()
 	pingError := server.storage.Ping()

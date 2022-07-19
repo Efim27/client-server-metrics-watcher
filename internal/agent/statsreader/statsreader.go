@@ -81,6 +81,6 @@ func (metricsDump *MetricsDump) Refresh() {
 	metricsDump.Alloc = gauge(MemStatistics.Alloc)
 	metricsDump.Sys = gauge(MemStatistics.Sys)
 	metricsDump.TotalAlloc = gauge(MemStatistics.TotalAlloc)
-	metricsDump.PollCount = counter(metricsDump.PollCount + 1)
+	metricsDump.PollCount = metricsDump.PollCount + 1
 	metricsDump.RandomValue = gauge(rand.Float64())
 }

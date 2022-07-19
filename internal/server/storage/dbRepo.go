@@ -32,7 +32,10 @@ func NewDBRepo(config config.StoreConfig) (DBRepo, error) {
 	repository.db = db
 
 	repository.PrepareDB()
-	repository.InitTables()
+	err = repository.InitTables()
+	if err != nil {
+		return DBRepo{}, err
+	}
 
 	return repository, nil
 }
@@ -62,20 +65,20 @@ func (repository DBRepo) Update(key string, newMetricValue MetricValue) error {
 	switch newMetricValue.MType {
 	case MeticTypeGauge:
 		if newMetricValue.Value == nil {
-			return errors.New("Metric Value is empty")
+			return errors.New("metric Value is empty")
 		}
 		newMetricValue.Delta = nil
 
 		return repository.updateGauge(key, newMetricValue)
 	case MeticTypeCounter:
 		if newMetricValue.Delta == nil {
-			return errors.New("Metric Delta is empty")
+			return errors.New("metric Delta is empty")
 		}
 		newMetricValue.Value = nil
 
 		return repository.updateCounter(key, newMetricValue)
 	default:
-		return errors.New("Metric type is not defined")
+		return errors.New("metric type is not defined")
 	}
 }
 
@@ -83,20 +86,20 @@ func (repository DBRepo) UpdateTX(key string, newMetricValue MetricValue, stmt *
 	switch newMetricValue.MType {
 	case MeticTypeGauge:
 		if newMetricValue.Value == nil {
-			return errors.New("Metric Value is empty")
+			return errors.New("metric Value is empty")
 		}
 		newMetricValue.Delta = nil
 
 		return repository.updateGaugeTX(key, newMetricValue, stmt)
 	case MeticTypeCounter:
 		if newMetricValue.Delta == nil {
-			return errors.New("Metric Delta is empty")
+			return errors.New("metric Delta is empty")
 		}
 		newMetricValue.Value = nil
 
 		return repository.updateCounterTX(key, newMetricValue, stmt)
 	default:
-		return errors.New("Metric type is not defined")
+		return errors.New("metric type is not defined")
 	}
 }
 
@@ -193,7 +196,7 @@ func (repository DBRepo) UpdateManySliceMetric(MetricBatch []Metric) error {
 }
 
 func (repository DBRepo) UpdateMany(DBSchema map[string]MetricValue) error {
-	MetricBatch := []Metric{}
+	var MetricBatch []Metric
 
 	for metricKey, metricValue := range DBSchema {
 		MetricBatch = append(MetricBatch, Metric{
@@ -309,9 +312,15 @@ func (repository DBRepo) InitFromFile() {
 	defer file.Close()
 
 	var metricsDump map[string]MetricMap
-	json.NewDecoder(file).Decode(&metricsDump)
+	err = json.NewDecoder(file).Decode(&metricsDump)
+	if err != nil {
+		panic(err)
+	}
 
 	for _, metricList := range metricsDump {
-		repository.UpdateMany(metricList)
+		err = repository.UpdateMany(metricList)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

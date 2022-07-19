@@ -5,11 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
-
-	"metrics/internal/server/contenttype"
 )
-
-var gzipAllowedContentTypes = []contenttype.ContentType{contenttype.ContentTypeHTML, contenttype.ContentTypeXML, contenttype.ContentTypeJSON, contenttype.ContentTypePlainText}
 
 type gzipWriter struct {
 	http.ResponseWriter
