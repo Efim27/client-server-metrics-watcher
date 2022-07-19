@@ -32,8 +32,12 @@ func NewHTTPClient(config config.Config) *AppHTTP {
 }
 
 func (app *AppHTTP) Run() {
-	var metricsDump statsreader.MetricsDump
 	signalChanel := make(chan os.Signal, 1)
+	metricsDump, err := statsreader.NewMetricsDump()
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	app.timeLog.startTime = time.Now()
 	app.isRun = true
@@ -46,14 +50,14 @@ func (app *AppHTTP) Run() {
 		select {
 		case timeTickerRefresh := <-tickerStatisticsRefresh.C:
 			app.timeLog.lastRefreshTime = timeTickerRefresh
-			wgRefresh.Add(1)
+			wgRefresh.Add(2)
 
 			go func() {
 				defer wgRefresh.Done()
 				metricsDump.Refresh()
 			}()
 			go func() {
-				err := metricsDump.RefreshExtra()
+				err = metricsDump.RefreshExtra()
 				if err != nil {
 					log.Println(err)
 				}
@@ -64,7 +68,7 @@ func (app *AppHTTP) Run() {
 			app.timeLog.lastUploadTime = timeTickerUpload
 			wgRefresh.Wait()
 
-			err := app.metricsUplader.MetricsUploadBatch(metricsDump)
+			err = app.metricsUplader.MetricsUploadBatch(*metricsDump)
 			if err != nil {
 				log.Println(err)
 
