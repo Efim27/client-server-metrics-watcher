@@ -68,12 +68,14 @@ func (app *AppHTTP) Run() {
 			app.timeLog.lastUploadTime = timeTickerUpload
 			wgRefresh.Wait()
 
-			err = app.metricsUplader.MetricsUploadBatch(*metricsDump)
-			if err != nil {
-				log.Println(err)
+			go func() {
+				err = app.metricsUplader.MetricsUploadBatch(*metricsDump)
+				if err != nil {
+					log.Println(err)
 
-				app.Stop()
-			}
+					app.Stop()
+				}
+			}()
 		case osSignal := <-signalChanel:
 			switch osSignal {
 			case syscall.SIGTERM:
