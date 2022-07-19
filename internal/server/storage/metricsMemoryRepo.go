@@ -213,15 +213,16 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) UpdateManySliceMetric(MetricBatch []Metric) error {
-	for _, metricValue := range MetricBatch {
-		err := metricsMemoryRepo.Update(metricValue.ID, metricValue.MetricValue)
-
-		if err != nil {
-			return err
+	MetricValueBatch := MetricMap{}
+	for _, OneMetric := range MetricBatch {
+		MetricValueBatch[OneMetric.ID] = MetricValue{
+			MType: OneMetric.MType,
+			Delta: OneMetric.Delta,
+			Value: OneMetric.Value,
 		}
 	}
 
-	return nil
+	return metricsMemoryRepo.UpdateMany(MetricValueBatch)
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) UpdateMany(DBSchema map[string]MetricValue) error {
