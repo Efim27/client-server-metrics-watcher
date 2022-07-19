@@ -201,14 +201,14 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
 	var metricsDump map[string]MetricMap
 	err = json.NewDecoder(file).Decode(&metricsDump)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 
 	for _, metricList := range metricsDump {
 		err = metricsMemoryRepo.UpdateMany(metricList)
-		if err != nil {
-			panic(err)
-		}
+	}
+	if err != nil {
+		log.Println(err)
 	}
 }
 

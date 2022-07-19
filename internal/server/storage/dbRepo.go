@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -314,13 +315,13 @@ func (repository DBRepo) InitFromFile() {
 	var metricsDump map[string]MetricMap
 	err = json.NewDecoder(file).Decode(&metricsDump)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 
 	for _, metricList := range metricsDump {
 		err = repository.UpdateMany(metricList)
-		if err != nil {
-			panic(err)
-		}
+	}
+	if err != nil {
+		log.Println(err)
 	}
 }
