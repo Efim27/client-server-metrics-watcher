@@ -3,12 +3,18 @@ package statsreader
 import (
 	"math/rand"
 	"runtime"
+	"sync"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 type gauge float64
 type counter int64
 
 type MetricsDump struct {
+	mu sync.RWMutex
+
 	Alloc         gauge
 	BuckHashSys   gauge
 	Frees         gauge
@@ -43,11 +49,19 @@ type MetricsDump struct {
 	TotalAlloc  gauge
 	PollCount   counter
 	RandomValue gauge
+
+	//Extra
+	TotalMemory     gauge
+	FreeMemory      gauge
+	CPUUtilizations []gauge
 }
 
 func (metricsDump *MetricsDump) Refresh() {
 	var MemStatistics runtime.MemStats
 	runtime.ReadMemStats(&MemStatistics)
+
+	metricsDump.mu.Lock()
+	defer metricsDump.mu.Unlock()
 
 	metricsDump.BuckHashSys = gauge(MemStatistics.BuckHashSys)
 	metricsDump.Frees = gauge(MemStatistics.Frees)
@@ -83,4 +97,31 @@ func (metricsDump *MetricsDump) Refresh() {
 	metricsDump.TotalAlloc = gauge(MemStatistics.TotalAlloc)
 	metricsDump.PollCount = metricsDump.PollCount + 1
 	metricsDump.RandomValue = gauge(rand.Float64())
+
+	metricsDump.RandomValue = gauge(rand.Float64())
+}
+
+func (metricsDump *MetricsDump) RefreshExtra() error {
+	metrics, err := mem.VirtualMemory()
+	if err != nil {
+		return nil
+	}
+
+	metricsDump.mu.Lock()
+	defer metricsDump.mu.Unlock()
+
+	metricsDump.TotalMemory = gauge(metrics.Total)
+	metricsDump.FreeMemory = gauge(metrics.Free)
+
+	percentageCPU, err := cpu.Percent(0, true)
+	if err != nil {
+		return err
+	}
+
+	metricsDump.CPUUtilizations = make([]gauge, len(percentageCPU))
+	for i, currentPercentageCPU := range percentageCPU {
+		metricsDump.CPUUtilizations[i] = gauge(currentPercentageCPU)
+	}
+
+	return nil
 }

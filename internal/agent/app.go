@@ -3,6 +3,7 @@ package agent
 import (
 	"log"
 	"os"
+	"sync"
 	"syscall"
 	"time"
 
@@ -39,20 +40,32 @@ func (app *AppHTTP) Run() {
 
 	tickerStatisticsRefresh := time.NewTicker(app.config.PollInterval)
 	tickerStatisticsUpload := time.NewTicker(app.config.ReportInterval)
+	wgRefresh := sync.WaitGroup{}
 
 	for app.isRun {
 		select {
 		case timeTickerRefresh := <-tickerStatisticsRefresh.C:
-			log.Println("Refresh")
 			app.timeLog.lastRefreshTime = timeTickerRefresh
-			metricsDump.Refresh()
+			wgRefresh.Add(1)
+
+			go func() {
+				defer wgRefresh.Done()
+				metricsDump.Refresh()
+			}()
+			go func() {
+				err := metricsDump.RefreshExtra()
+				if err != nil {
+					log.Println(err)
+				}
+
+				defer wgRefresh.Done()
+			}()
 		case timeTickerUpload := <-tickerStatisticsUpload.C:
 			app.timeLog.lastUploadTime = timeTickerUpload
-			log.Println("Upload")
+			wgRefresh.Wait()
 
 			err := app.metricsUplader.MetricsUploadBatch(metricsDump)
 			if err != nil {
-				log.Println("Error!")
 				log.Println(err)
 
 				app.Stop()
