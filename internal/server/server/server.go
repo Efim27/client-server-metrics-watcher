@@ -1,18 +1,22 @@
 package server
 
 import (
-	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi"
 	chimiddleware "github.com/go-chi/chi/middleware"
+	"go.uber.org/zap"
+	"metrics/internal/logger"
 	"metrics/internal/server/config"
 	"metrics/internal/server/middleware"
 	"metrics/internal/server/storage"
 )
 
 type Server struct {
+	logFile   *os.File
+	logger    *zap.Logger
 	storage   storage.MetricStorager
 	chiRouter chi.Router
 	config    config.Config
@@ -20,18 +24,39 @@ type Server struct {
 }
 
 func NewServer(config config.Config) *Server {
-	log.Println(config)
-
-	return &Server{
+	server := &Server{
 		config: config,
 	}
+	mustInitLogger(server)
+	server.logger.Info("load config successfully", zap.Any("config", server.config))
+
+	return server
+}
+
+func mustInitLogger(server *Server) {
+	logLevel := zap.InfoLevel
+	if server.config.DebugMode {
+		logLevel = zap.DebugLevel
+	}
+
+	if server.config.LogFile != "" {
+		logFile, err := os.OpenFile(server.config.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			panic("cant open log file")
+		}
+
+		server.logFile = logFile
+	}
+
+	server.logger = logger.InitializeLogger(server.logFile, logLevel)
+	server.logger.Info("debug mode enabled")
 }
 
 func (server *Server) selectStorage() storage.MetricStorager {
 	storageConfig := server.config.Store
 
 	if storageConfig.DatabaseDSN != "" {
-		log.Println("DB Storage")
+		server.logger.Info("use database storage")
 		repository, err := storage.NewDBRepo(storageConfig)
 		if err != nil {
 			panic(err)
@@ -40,7 +65,7 @@ func (server *Server) selectStorage() storage.MetricStorager {
 		return repository
 	}
 
-	log.Println("Memory Storage")
+	server.logger.Info("use memory storage")
 	repository := storage.NewMetricsMemoryRepo(storageConfig)
 
 	return repository
@@ -83,9 +108,11 @@ func (server *Server) initRouter() {
 }
 
 func (server *Server) Run() {
+	server.logger.Info("start")
 	server.initStorage()
+	server.logger.Info("init storage successfully")
 	defer server.storage.Close()
 	server.initRouter()
 
-	log.Fatal(http.ListenAndServe(server.config.ServerAddr, server.chiRouter))
+	server.logger.Fatal("fatal error HTTP server", zap.Error(http.ListenAndServe(server.config.ServerAddr, server.chiRouter)))
 }

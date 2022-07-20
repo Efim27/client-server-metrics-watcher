@@ -19,6 +19,8 @@ type Config struct {
 	ServerAddr       string `env:"ADDRESS"` //host:port
 	TemplatesAbsPath string `env:"TEMPLATES_ABS_PATH"`
 	SignKey          string `env:"KEY"`
+	LogFile          string `env:"LOG_FILE"`
+	DebugMode        bool   `env:"DEBUG"`
 	Store            StoreConfig
 }
 
@@ -37,6 +39,7 @@ func (config *Config) initDefaultValues() {
 		File:     "/tmp/devops-metrics-db.json",
 		Restore:  true,
 	}
+	config.DebugMode = false
 }
 
 func (config *Config) parseEnv() error {
@@ -52,6 +55,8 @@ func (config *Config) parseFlags() {
 	flag.DurationVar(&config.Store.Interval, "i", config.Store.Interval, "store interval (example: 10s)")
 	flag.StringVar(&config.Store.DatabaseDSN, "d", config.Store.DatabaseDSN, "Database DSN")
 	flag.StringVar(&config.Store.File, "f", config.Store.File, "path to file for storage metrics")
+	flag.StringVar(&config.LogFile, "l", config.LogFile, "path to log file")
+	flag.BoolVar(&config.DebugMode, "debug", config.DebugMode, "debug mode")
 	flag.Parse()
 }
 

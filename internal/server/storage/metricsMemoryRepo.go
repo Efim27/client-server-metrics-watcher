@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -185,7 +184,7 @@ func (metricsMemoryRepo MetricsMemoryRepo) IterativeUploadToFile() {
 		for range tickerUpload.C {
 			err := metricsMemoryRepo.UploadToFile()
 			if err != nil {
-				log.Println(err)
+				panic(err)
 			}
 		}
 	}()
@@ -201,14 +200,14 @@ func (metricsMemoryRepo MetricsMemoryRepo) InitFromFile() {
 	var metricsDump map[string]MetricMap
 	err = json.NewDecoder(file).Decode(&metricsDump)
 	if err != nil {
-		log.Println(err)
+		panic(err)
 	}
 
 	for _, metricList := range metricsDump {
 		err = metricsMemoryRepo.UpdateMany(metricList)
 	}
 	if err != nil {
-		log.Println(err)
+		panic(err)
 	}
 }
 
