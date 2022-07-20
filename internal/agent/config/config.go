@@ -19,12 +19,15 @@ type Config struct {
 	PollInterval         time.Duration `env:"POLL_INTERVAL"`
 	ReportInterval       time.Duration `env:"REPORT_INTERVAL"`
 	SignKey              string        `env:"KEY"`
+	LogFile              string        `env:"LOG_FILE"`
+	DebugMode            bool          `env:"DEBUG"`
 	HTTPClientConnection HTTPClientConfig
 }
 
 func (config *Config) initDefaultValues() {
 	config.PollInterval = time.Duration(2) * time.Second
 	config.ReportInterval = time.Duration(10) * time.Second
+	config.DebugMode = false
 
 	config.HTTPClientConnection = HTTPClientConfig{
 		RetryCount:       2,
@@ -50,6 +53,8 @@ func (config *Config) parseFlags() {
 	flag.DurationVar(&config.PollInterval, "p", config.PollInterval, "poll interval (example: 10s)")
 	flag.StringVar(&config.HTTPClientConnection.ServerAddr, "a", config.HTTPClientConnection.ServerAddr, "server address (host:port)")
 	flag.StringVar(&config.SignKey, "k", config.SignKey, "sign key")
+	flag.StringVar(&config.LogFile, "l", config.LogFile, "path to log file, to disable use empty path \"\"")
+	flag.BoolVar(&config.DebugMode, "d", config.DebugMode, "debug mode \"\"")
 	flag.Parse()
 }
 

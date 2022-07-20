@@ -7,6 +7,6 @@ import (
 
 func main() {
 	appConfig := config.LoadConfig()
-	app := agent.NewHTTPClient(appConfig)
+	app := agent.NewAppHTTP(appConfig)
 	app.Run()
 }
