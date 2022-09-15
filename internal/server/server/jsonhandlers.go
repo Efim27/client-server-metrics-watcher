@@ -13,6 +13,14 @@ import (
 	"metrics/internal/server/storage"
 )
 
+// UpdateMetricPostJSON
+// @Tags Update
+// @Summary Update metric value
+// @ID updateMetricPostJSON
+// @Produce json
+// @Success 200
+// @Failure 400
+// @Router /update/ [post]
 func (server Server) UpdateMetricPostJSON(rw http.ResponseWriter, request *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 
@@ -69,6 +77,15 @@ func (server Server) UpdateMetricPostJSON(rw http.ResponseWriter, request *http.
 	rw.Write(response.SetHash(hex.EncodeToString(metricHash)).GetJSONBytes())
 }
 
+// UpdateMetricBatchJSON
+// @Tags Update
+// @Summary Update metric value using batch JSON
+// @ID updateMetricBatchJSON
+// @Produce json
+// @Param JSON body []storage.Metric true "JSON"
+// @Success 200
+// @Failure 400
+// @Router /updates/ [post]
 func (server Server) UpdateMetricBatchJSON(rw http.ResponseWriter, request *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 
@@ -102,6 +119,16 @@ func (server Server) UpdateMetricBatchJSON(rw http.ResponseWriter, request *http
 	rw.Write(response.GetJSONBytes())
 }
 
+// MetricValuePostJSON
+// @Tags Value
+// @Summary Metric value JSON
+// @ID metricValuePostJSON
+// @Produce json
+// @Param JSON body handlers.InputMetricsJSON true "JSON"
+// @Success 200
+// @Failure 400
+// @Failure 404
+// @Router /value/ [post]
 func (server Server) MetricValuePostJSON(rw http.ResponseWriter, request *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	var InputMetricsJSON struct {
@@ -153,6 +180,13 @@ func (server Server) MetricValuePostJSON(rw http.ResponseWriter, request *http.R
 	}
 }
 
+// PingGetJSON
+// @Summary Ping
+// @ID pingGetJSON
+// @Produce json
+// @Success 200
+// @Failure 500
+// @Router /ping [get]
 func (server Server) PingGetJSON(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	response := responses.NewDefaultResponse()

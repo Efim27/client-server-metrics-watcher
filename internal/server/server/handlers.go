@@ -9,6 +9,17 @@ import (
 	"metrics/internal/server/storage"
 )
 
+// UpdateGaugePost
+// @Tags Update
+// @Summary Update gauge metric
+// @ID updateGaugePost
+// @Produce plain
+// @Param statName query string false "Имя метрики"
+// @Param statValue query string false "Значение"
+// @Success 200
+// @Failure 400
+// @Failure 500
+// @Router /update/gauge/{statName}/{statValue} [post]
 func (server Server) UpdateGaugePost(rw http.ResponseWriter, request *http.Request) {
 	statName := chi.URLParam(request, "statName")
 	statValue := chi.URLParam(request, "statValue")
@@ -35,6 +46,17 @@ func (server Server) UpdateGaugePost(rw http.ResponseWriter, request *http.Reque
 	rw.Write([]byte("Ok"))
 }
 
+// UpdateCounterPost
+// @Tags Update
+// @Summary Update counter metric
+// @ID updateCounterPost
+// @Produce plain
+// @Param statName query string false "Имя метрики"
+// @Param statValue query string false "Значение"
+// @Success 200
+// @Failure 400
+// @Failure 500
+// @Router /update/counter/{statName}/{statValue} [post]
 func (server Server) UpdateCounterPost(rw http.ResponseWriter, request *http.Request) {
 	statName := chi.URLParam(request, "statName")
 	statValue := chi.URLParam(request, "statValue")
@@ -60,6 +82,16 @@ func (server Server) UpdateCounterPost(rw http.ResponseWriter, request *http.Req
 	rw.Write([]byte("Ok"))
 }
 
+// UpdateNotImplementedPost
+// @Tags Update
+// @Summary Update not implemented
+// @ID updateNotImplementedPost
+// @Produce plain
+// @Param statType query string false "Тип метрики" Enums(gauge, counter) default(gauge)
+// @Param statName query string false "Имя метрики"
+// @Param statValue query string false "Значение"
+// @Failure 501
+// @Router /update/{statType}/{statName}/{statValue} [post]
 func (server Server) UpdateNotImplementedPost(rw http.ResponseWriter, _ *http.Request) {
 	server.logger.Debug("update not implemented statType")
 
@@ -67,6 +99,16 @@ func (server Server) UpdateNotImplementedPost(rw http.ResponseWriter, _ *http.Re
 	rw.Write([]byte("Not implemented"))
 }
 
+// PrintMetricGet
+// @Tags Value
+// @Summary Metric value
+// @ID printMetricGet
+// @Produce plain
+// @Param statType query string false "Тип метрики" Enums(gauge, counter) default(gauge)
+// @Param statName query string false "Имя метрики"
+// @Success 200
+// @Failure 404
+// @Router /value/{statType}/{statName} [get]
 func (server Server) PrintMetricGet(rw http.ResponseWriter, request *http.Request) {
 	statType := chi.URLParam(request, "statType")
 	statName := chi.URLParam(request, "statName")
