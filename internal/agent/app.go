@@ -74,8 +74,6 @@ func uploadMetrics(app *AppHTTP, metricsDump *statsreader.MetricsDump, wgRefresh
 		err := app.metricsUplader.MetricsUploadBatch(*metricsDump)
 		if err != nil {
 			app.logger.Error("cant upload metrics", zap.Error(err))
-
-			app.Stop()
 		}
 	}()
 }

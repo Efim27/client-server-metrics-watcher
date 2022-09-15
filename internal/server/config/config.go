@@ -16,7 +16,8 @@ type StoreConfig struct {
 }
 
 type Config struct {
-	ServerAddr       string `env:"ADDRESS"` //host:port
+	ServerAddr       string `env:"ADDRESS"`      //host:port
+	ProfilingAddr    string `env:"PROF_ADDRESS"` //host:port
 	TemplatesAbsPath string `env:"TEMPLATES_ABS_PATH"`
 	SignKey          string `env:"KEY"`
 	LogFile          string `env:"LOG_FILE"`
@@ -33,6 +34,7 @@ func newConfig() *Config {
 
 func (config *Config) initDefaultValues() {
 	config.ServerAddr = "127.0.0.1:8080"
+	config.ProfilingAddr = "127.0.0.1:8090"
 	config.TemplatesAbsPath = "./templates"
 	config.Store = StoreConfig{
 		Interval: time.Duration(300) * time.Second,
@@ -48,6 +50,7 @@ func (config *Config) parseEnv() error {
 
 func (config *Config) parseFlags() {
 	flag.StringVar(&config.ServerAddr, "a", config.ServerAddr, "server address (host:port)")
+	flag.StringVar(&config.ProfilingAddr, "pa", config.ProfilingAddr, "profiling address (host:port)")
 	flag.StringVar(&config.SignKey, "k", config.SignKey, "sign key")
 
 	//StoreConfig

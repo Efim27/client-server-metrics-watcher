@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/go-chi/chi"
 	chimiddleware "github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
@@ -83,8 +85,6 @@ func (server *Server) initStorage() {
 func (server *Server) initRouter() {
 	router := chi.NewRouter()
 
-	router.Use(chimiddleware.RequestID)
-	router.Use(chimiddleware.RealIP)
 	router.Use(chimiddleware.Logger)
 	router.Use(chimiddleware.Recoverer)
 	router.Use(middleware.GzipHandle)
@@ -115,4 +115,8 @@ func (server *Server) Run() {
 	server.initRouter()
 
 	server.logger.Fatal("fatal error HTTP server", zap.Error(http.ListenAndServe(server.config.ServerAddr, server.chiRouter)))
+}
+
+func (server *Server) Config() (config config.Config) {
+	return server.config
 }
