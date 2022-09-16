@@ -1,3 +1,4 @@
+// Package logger - zap логер с возможностью записи в консоль, файл
 package logger
 
 import (
@@ -26,6 +27,8 @@ func getLoggerTee(logFile *os.File, config zapcore.EncoderConfig, defaultLogLeve
 	return
 }
 
+// InitializeLogger
+// Если logFile является nil, то записи в файл не будет
 func InitializeLogger(logFile *os.File, defaultLogLevel zapcore.Level) (logger *zap.Logger) {
 	config := zap.NewProductionEncoderConfig()
 	config.EncodeTime = zapcore.ISO8601TimeEncoder

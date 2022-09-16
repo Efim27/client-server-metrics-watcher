@@ -1,3 +1,6 @@
+// Package server - обработчики сервера
+//
+// Подробнее в swagger документации
 package server
 
 import (

@@ -1,3 +1,4 @@
+// Клиент для сбора runtime метрик и отправки на сервер
 package main
 
 import (

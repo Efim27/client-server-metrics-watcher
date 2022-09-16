@@ -8,6 +8,15 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+// HTTPClientConfig
+//
+// количество попыток отправки запроса: env: RETRY_CONN_COUNT; default: 2
+//
+// время ожидания между попытками отправки запроса: env: RETRY_CONN_WAIT_TIME; default: 10s
+//
+// макс. время для попыток отправки запроса: env: RETRY_CONN_MAX_WAIT_TIME; default: 90s
+//
+// адрес сервера: env: ADDRESS; default: 127.0.0.1:8080
 type HTTPClientConfig struct {
 	RetryCount       int           `env:"RETRY_CONN_COUNT"`
 	RetryWaitTime    time.Duration `env:"RETRY_CONN_WAIT_TIME"`
@@ -15,6 +24,17 @@ type HTTPClientConfig struct {
 	ServerAddr       string        `env:"ADDRESS"` //addr:port
 }
 
+// Config
+//
+// интервал между считыванием метрик: env: POLL_INTERVAL; flag: p; default: 2s
+//
+// интервал между отправки метрик:  env: REPORT_INTERVAL; flag: r; default: 2s
+//
+// ключ для подписи сообщений: env: KEY; flag: k
+//
+// лог файл: env: LOG_FILEж flag: l
+//
+// debug мод: env: DEBUG; flag: d
 type Config struct {
 	PollInterval         time.Duration `env:"POLL_INTERVAL"`
 	ReportInterval       time.Duration `env:"REPORT_INTERVAL"`
@@ -24,6 +44,7 @@ type Config struct {
 	HTTPClientConnection HTTPClientConfig
 }
 
+// initDefaultValues значения конфига по умолчанию
 func (config *Config) initDefaultValues() {
 	config.PollInterval = time.Duration(2) * time.Second
 	config.ReportInterval = time.Duration(10) * time.Second

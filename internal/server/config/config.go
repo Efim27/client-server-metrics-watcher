@@ -8,6 +8,15 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+// StoreConfig
+//
+// интервал выгрузки на диск: env: STORE_INTERVAL; flag: i; default: 300s
+//
+// DSN БД: env: DATABASE_DSN; flag: d
+//
+// файл для выгрузки: env: STORE_FILE; flag: f; default: /tmp/devops-metrics-db.json
+//
+// чтение значений с диска при запуске: env: RESTORE; flag: r; default: false
 type StoreConfig struct {
 	Interval    time.Duration `env:"STORE_INTERVAL"`
 	DatabaseDSN string        `env:"DATABASE_DSN"`
@@ -15,6 +24,19 @@ type StoreConfig struct {
 	Restore     bool          `env:"RESTORE"`
 }
 
+// Config
+//
+// адрес сервера: env: ADDRESS; flag: a; default: 127.0.0.1:8080
+//
+// адрес WEB UI профилировщика: env: PROF_ADDRESS; flag: pa; default: 127.0.0.1:8090
+//
+// абсолютный путь до шаблонов HTML: env: TEMPLATES_ABS_PATH; default: ./templates
+//
+// ключ для подписи сообщений: env: RESTORE; flag: k
+//
+// лог файл: env: LOG_FILE; flag: l
+//
+// debug мод: env: DEBUG; flag: debug; default: false
 type Config struct {
 	ServerAddr       string `env:"ADDRESS"`      //host:port
 	ProfilingAddr    string `env:"PROF_ADDRESS"` //host:port
@@ -52,14 +74,14 @@ func (config *Config) parseFlags() {
 	flag.StringVar(&config.ServerAddr, "a", config.ServerAddr, "server address (host:port)")
 	flag.StringVar(&config.ProfilingAddr, "pa", config.ProfilingAddr, "profiling address (host:port)")
 	flag.StringVar(&config.SignKey, "k", config.SignKey, "sign key")
+	flag.StringVar(&config.LogFile, "l", config.LogFile, "path to log file")
+	flag.BoolVar(&config.DebugMode, "debug", config.DebugMode, "debug mode")
 
 	//StoreConfig
 	flag.BoolVar(&config.Store.Restore, "r", config.Store.Restore, "restoring metrics from file")
 	flag.DurationVar(&config.Store.Interval, "i", config.Store.Interval, "store interval (example: 10s)")
 	flag.StringVar(&config.Store.DatabaseDSN, "d", config.Store.DatabaseDSN, "Database DSN")
 	flag.StringVar(&config.Store.File, "f", config.Store.File, "path to file for storage metrics")
-	flag.StringVar(&config.LogFile, "l", config.LogFile, "path to log file")
-	flag.BoolVar(&config.DebugMode, "debug", config.DebugMode, "debug mode")
 	flag.Parse()
 }
 

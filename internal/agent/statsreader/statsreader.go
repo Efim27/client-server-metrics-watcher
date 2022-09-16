@@ -1,3 +1,4 @@
+// Package statsreader - считыватель runtime метрик
 package statsreader
 
 import (

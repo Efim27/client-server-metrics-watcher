@@ -1,3 +1,4 @@
+// HTTP сервер для runtime метрик
 package main
 
 import (
