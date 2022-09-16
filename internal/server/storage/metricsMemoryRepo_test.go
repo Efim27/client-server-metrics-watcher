@@ -1,21 +1,47 @@
 package storage
 
 import (
+	"fmt"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"metrics/internal/server/config"
 )
 
+func ExampleMemoryRepo() {
+	memoryRepo, err := NewMemoryRepo()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var counterValueExpect int64 = 50
+	err = memoryRepo.Write("PollCount", MetricValue{
+		MType: MeticTypeCounter,
+		Delta: &counterValueExpect,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	counterValueReal, err := memoryRepo.Read("PollCount")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(counterValueExpect == *counterValueReal.Delta)
+}
+
 func TestMemoryRepoRW(t *testing.T) {
 	memoryRepo, err := NewMemoryRepo()
 	require.NoError(t, err)
 
 	var counterValueExpect int64 = 50
-	memoryRepo.Write("PollCount", MetricValue{
+	err = memoryRepo.Write("PollCount", MetricValue{
 		MType: MeticTypeCounter,
 		Delta: &counterValueExpect,
 	})
+	require.NoError(t, err)
 	counterValueReal, err := memoryRepo.Read("PollCount")
 
 	require.NoError(t, err)
