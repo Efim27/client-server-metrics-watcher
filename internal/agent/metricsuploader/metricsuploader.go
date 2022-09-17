@@ -125,9 +125,38 @@ func (metricsUplader *MetricsUplader) oneStatUploadJSON(mType string, name strin
 	return nil
 }
 
-// MetricsUpload - конкурентная отправка метрик
+// MetricsUploadSync - конкурентная отправка метрик
 // Deprecated: используйте MetricsUploadBatch
-func (metricsUplader *MetricsUplader) MetricsUpload(metricsDump statsreader.MetricsDump) error {
+func (metricsUplader *MetricsUplader) MetricsUploadSync(metricsDump statsreader.MetricsDump) (err error) {
+	metricsDump.RLock()
+	defer metricsDump.RUnlock()
+
+	for key, metricRawValue := range metricsDump.MetricsGauge {
+		metricName := key
+		metricValue := fmt.Sprintf("%v", metricRawValue)
+
+		err = metricsUplader.oneStatUploadJSON("gauge", metricName, metricValue)
+		if err != nil {
+			return
+		}
+	}
+
+	for key, metricRawValue := range metricsDump.MetricsCounter {
+		metricName := key
+		metricValue := fmt.Sprintf("%v", metricRawValue)
+
+		err = metricsUplader.oneStatUploadJSON("counter", metricName, metricValue)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+// MetricsUploadAsync - конкурентная отправка метрик
+// Deprecated: используйте MetricsUploadBatch
+func (metricsUplader *MetricsUplader) MetricsUploadAsync(metricsDump statsreader.MetricsDump) error {
 	metricsDump.RLock()
 	defer metricsDump.RUnlock()
 

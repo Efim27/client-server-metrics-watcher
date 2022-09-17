@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"time"
@@ -107,14 +108,31 @@ func (server *Server) initRouter() {
 	server.chiRouter = router
 }
 
-func (server *Server) Run() {
+func (server *Server) Run(ctx context.Context) {
 	server.logger.Info("start")
+
 	server.initStorage()
 	server.logger.Info("init storage successfully")
 	defer server.storage.Close()
-	server.initRouter()
 
-	server.logger.Fatal("fatal error HTTP server", zap.Error(http.ListenAndServe(server.config.ServerAddr, server.chiRouter)))
+	server.initRouter()
+	serverHTTP := &http.Server{
+		Addr:    server.config.ServerAddr,
+		Handler: server.chiRouter,
+	}
+
+	go func() {
+		err := serverHTTP.ListenAndServe()
+		if err != nil {
+			server.logger.Info("HTTP server closed", zap.Error(err))
+		}
+	}()
+
+	<-ctx.Done()
+	err := serverHTTP.Close()
+	if err != nil {
+		server.logger.Fatal("HTTP server stop error", zap.Error(err))
+	}
 }
 
 func (server *Server) Config() (config config.Config) {

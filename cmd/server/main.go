@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -15,9 +16,11 @@ func Profiling(addr string) {
 }
 
 func main() {
+	ctx := context.Background()
+
 	appConfig := config.LoadConfig()
 	appServer := server.NewServer(appConfig)
 
 	go Profiling(appServer.Config().ProfilingAddr)
-	appServer.Run()
+	appServer.Run(ctx)
 }
