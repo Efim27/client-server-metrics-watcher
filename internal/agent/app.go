@@ -3,62 +3,79 @@ package agent
 import (
 	"log"
 	"os"
+	"sync"
 	"syscall"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"metrics/internal/agent/config"
-	"metrics/internal/agent/requesthandler"
+	"metrics/internal/agent/metricsuploader"
 	"metrics/internal/agent/statsreader"
 )
 
 type AppHTTP struct {
-	isRun           bool
-	startTime       time.Time
-	lastRefreshTime time.Time
-	lastUploadTime  time.Time
-	client          *resty.Client
+	isRun   bool
+	timeLog struct {
+		startTime       time.Time
+		lastRefreshTime time.Time
+		lastUploadTime  time.Time
+	}
+	metricsUplader *metricsuploader.MetricsUplader
+	config         config.Config
 }
 
-func (app *AppHTTP) initHTTPClient() {
-	client := resty.New()
+func NewHTTPClient(config config.Config) *AppHTTP {
+	var app AppHTTP
+	app.config = config
+	app.metricsUplader = metricsuploader.NewMetricsUploader(app.config.HTTPClientConnection, app.config.SignKey)
 
-	client.
-		SetRetryCount(config.ConfigClientRetryCount).
-		SetRetryWaitTime(config.ConfigClientRetryWaitTime).
-		SetRetryMaxWaitTime(config.ConfigClientRetryMaxWaitTime)
-
-	app.client = client
+	return &app
 }
 
 func (app *AppHTTP) Run() {
-	var memStatistics statsreader.MemoryStatsDump
 	signalChanel := make(chan os.Signal, 1)
+	metricsDump, err := statsreader.NewMetricsDump()
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
-	app.initHTTPClient()
-	app.startTime = time.Now()
+	app.timeLog.startTime = time.Now()
 	app.isRun = true
 
-	tickerStatisticsRefresh := time.NewTicker(config.ConfigPollInterval * time.Second)
-	tickerStatisticsUpload := time.NewTicker(config.ConfigReportInterval * time.Second)
+	tickerStatisticsRefresh := time.NewTicker(app.config.PollInterval)
+	tickerStatisticsUpload := time.NewTicker(app.config.ReportInterval)
+	wgRefresh := sync.WaitGroup{}
 
 	for app.isRun {
 		select {
 		case timeTickerRefresh := <-tickerStatisticsRefresh.C:
-			log.Println("Refresh")
-			app.lastRefreshTime = timeTickerRefresh
-			memStatistics.Refresh()
+			app.timeLog.lastRefreshTime = timeTickerRefresh
+			wgRefresh.Add(2)
+
+			go func() {
+				defer wgRefresh.Done()
+				metricsDump.Refresh()
+			}()
+			go func() {
+				err = metricsDump.RefreshExtra()
+				if err != nil {
+					log.Println(err)
+				}
+
+				defer wgRefresh.Done()
+			}()
 		case timeTickerUpload := <-tickerStatisticsUpload.C:
-			app.lastUploadTime = timeTickerUpload
-			log.Println("Upload")
+			app.timeLog.lastUploadTime = timeTickerUpload
+			wgRefresh.Wait()
 
-			err := requesthandler.MemoryStatsUpload(app.client, memStatistics)
-			if err != nil {
-				log.Println("Error!")
-				log.Println(err)
+			go func() {
+				err = app.metricsUplader.MetricsUploadBatch(*metricsDump)
+				if err != nil {
+					log.Println(err)
 
-				app.Stop()
-			}
+					app.Stop()
+				}
+			}()
 		case osSignal := <-signalChanel:
 			switch osSignal {
 			case syscall.SIGTERM:

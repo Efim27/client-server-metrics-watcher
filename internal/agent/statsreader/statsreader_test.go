@@ -7,10 +7,12 @@ import (
 )
 
 func TestRefresh(t *testing.T) {
-	var memStatistics MemoryStatsDump
-	memStatistics.Refresh()
-	memStatistics.Refresh()
-	memStatistics.Refresh()
+	metricsDump, err := NewMetricsDump()
+	assert.NoError(t, err)
 
-	assert.Equal(t, 3, int(memStatistics.PollCount))
+	metricsDump.Refresh()
+	metricsDump.Refresh()
+	metricsDump.Refresh()
+
+	assert.Equal(t, 3, int(metricsDump.MetricsCounter["PollCount"]))
 }

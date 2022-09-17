@@ -1,86 +1,97 @@
 package statsreader
 
 import (
+	"fmt"
 	"math/rand"
 	"runtime"
+	"sync"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 type gauge float64
 type counter int64
 
-type MemoryStatsDump struct {
-	Alloc         gauge
-	BuckHashSys   gauge
-	Frees         gauge
-	GCCPUFraction gauge
-	GCSys         gauge
-
-	HeapAlloc    gauge
-	HeapIdle     gauge
-	HeapInuse    gauge
-	HeapObjects  gauge
-	HeapReleased gauge
-
-	HeapSys     gauge
-	LastGC      gauge
-	Lookups     gauge
-	MCacheInuse gauge
-	MCacheSys   gauge
-
-	MSpanInuse  gauge
-	MSpanSys    gauge
-	Mallocs     gauge
-	NextGC      gauge
-	NumForcedGC gauge
-
-	NumGC        gauge
-	OtherSys     gauge
-	PauseTotalNs gauge
-	StackInuse   gauge
-	StackSys     gauge
-
-	Sys         gauge
-	TotalAlloc  gauge
-	PollCount   counter
-	RandomValue gauge
+type MetricsDump struct {
+	*sync.RWMutex
+	MetricsGauge   map[string]gauge
+	MetricsCounter map[string]counter
 }
 
-func (memoryStats *MemoryStatsDump) Refresh() {
+func NewMetricsDump() (*MetricsDump, error) {
+	return &MetricsDump{
+		RWMutex:        &sync.RWMutex{},
+		MetricsGauge:   make(map[string]gauge),
+		MetricsCounter: make(map[string]counter),
+	}, nil
+}
+
+func (metricsDump *MetricsDump) Refresh() {
 	var MemStatistics runtime.MemStats
 	runtime.ReadMemStats(&MemStatistics)
 
-	memoryStats.BuckHashSys = gauge(MemStatistics.BuckHashSys)
-	memoryStats.Frees = gauge(MemStatistics.Frees)
-	memoryStats.GCCPUFraction = gauge(MemStatistics.GCCPUFraction)
-	memoryStats.GCSys = gauge(MemStatistics.GCSys)
-	memoryStats.HeapAlloc = gauge(MemStatistics.HeapAlloc)
+	metricsDump.Lock()
+	defer metricsDump.Unlock()
 
-	memoryStats.HeapIdle = gauge(MemStatistics.HeapIdle)
-	memoryStats.HeapInuse = gauge(MemStatistics.HeapInuse)
-	memoryStats.HeapObjects = gauge(MemStatistics.HeapObjects)
-	memoryStats.HeapReleased = gauge(MemStatistics.HeapReleased)
-	memoryStats.HeapSys = gauge(MemStatistics.HeapSys)
+	metricsDump.MetricsGauge["BuckHashSys"] = gauge(MemStatistics.BuckHashSys)
+	metricsDump.MetricsGauge["Frees"] = gauge(MemStatistics.Frees)
+	metricsDump.MetricsGauge["GCCPUFraction"] = gauge(MemStatistics.GCCPUFraction)
+	metricsDump.MetricsGauge["GCSys"] = gauge(MemStatistics.GCSys)
+	metricsDump.MetricsGauge["HeapAlloc"] = gauge(MemStatistics.HeapAlloc)
 
-	memoryStats.LastGC = gauge(MemStatistics.LastGC)
-	memoryStats.Lookups = gauge(MemStatistics.Lookups)
-	memoryStats.MCacheInuse = gauge(MemStatistics.MCacheInuse)
-	memoryStats.MCacheSys = gauge(MemStatistics.MCacheSys)
-	memoryStats.MSpanInuse = gauge(MemStatistics.MSpanInuse)
+	metricsDump.MetricsGauge["HeapIdle"] = gauge(MemStatistics.HeapIdle)
+	metricsDump.MetricsGauge["HeapInuse"] = gauge(MemStatistics.HeapInuse)
+	metricsDump.MetricsGauge["HeapObjects"] = gauge(MemStatistics.HeapObjects)
+	metricsDump.MetricsGauge["HeapReleased"] = gauge(MemStatistics.HeapReleased)
+	metricsDump.MetricsGauge["HeapSys"] = gauge(MemStatistics.HeapSys)
 
-	memoryStats.MSpanSys = gauge(MemStatistics.MSpanSys)
-	memoryStats.Mallocs = gauge(MemStatistics.Mallocs)
-	memoryStats.NextGC = gauge(MemStatistics.NextGC)
-	memoryStats.NumForcedGC = gauge(MemStatistics.NumForcedGC)
-	memoryStats.NumGC = gauge(MemStatistics.NumGC)
+	metricsDump.MetricsGauge["LastGC"] = gauge(MemStatistics.LastGC)
+	metricsDump.MetricsGauge["Lookups"] = gauge(MemStatistics.Lookups)
+	metricsDump.MetricsGauge["MCacheInuse"] = gauge(MemStatistics.MCacheInuse)
+	metricsDump.MetricsGauge["MCacheSys"] = gauge(MemStatistics.MCacheSys)
+	metricsDump.MetricsGauge["MSpanInuse"] = gauge(MemStatistics.MSpanInuse)
 
-	memoryStats.OtherSys = gauge(MemStatistics.OtherSys)
-	memoryStats.PauseTotalNs = gauge(MemStatistics.PauseTotalNs)
-	memoryStats.StackInuse = gauge(MemStatistics.StackInuse)
-	memoryStats.StackSys = gauge(MemStatistics.StackSys)
+	metricsDump.MetricsGauge["MSpanSys"] = gauge(MemStatistics.MSpanSys)
+	metricsDump.MetricsGauge["Mallocs"] = gauge(MemStatistics.Mallocs)
+	metricsDump.MetricsGauge["NextGC"] = gauge(MemStatistics.NextGC)
+	metricsDump.MetricsGauge["NumForcedGC"] = gauge(MemStatistics.NumForcedGC)
+	metricsDump.MetricsGauge["NumGC"] = gauge(MemStatistics.NumGC)
 
-	memoryStats.Alloc = gauge(MemStatistics.Alloc)
-	memoryStats.Sys = gauge(MemStatistics.Sys)
-	memoryStats.TotalAlloc = gauge(MemStatistics.TotalAlloc)
-	memoryStats.PollCount = counter(memoryStats.PollCount + 1)
-	memoryStats.RandomValue = gauge(rand.Float64())
+	metricsDump.MetricsGauge["OtherSys"] = gauge(MemStatistics.OtherSys)
+	metricsDump.MetricsGauge["PauseTotalNs"] = gauge(MemStatistics.PauseTotalNs)
+	metricsDump.MetricsGauge["StackInuse"] = gauge(MemStatistics.StackInuse)
+	metricsDump.MetricsGauge["StackSys"] = gauge(MemStatistics.StackSys)
+
+	metricsDump.MetricsGauge["Alloc"] = gauge(MemStatistics.Alloc)
+	metricsDump.MetricsGauge["Sys"] = gauge(MemStatistics.Sys)
+	metricsDump.MetricsGauge["TotalAlloc"] = gauge(MemStatistics.TotalAlloc)
+	metricsDump.MetricsGauge["RandomValue"] = gauge(rand.Float64())
+
+	metricsDump.MetricsCounter["PollCount"] = metricsDump.MetricsCounter["PollCount"] + 1
+}
+
+func (metricsDump *MetricsDump) RefreshExtra() error {
+	metrics, err := mem.VirtualMemory()
+	if err != nil {
+		return nil
+	}
+
+	metricsDump.Lock()
+	defer metricsDump.Unlock()
+
+	metricsDump.MetricsGauge["TotalMemory"] = gauge(metrics.Total)
+	metricsDump.MetricsGauge["FreeMemory"] = gauge(metrics.Free)
+
+	percentageCPU, err := cpu.Percent(0, true)
+	if err != nil {
+		return err
+	}
+
+	for i, currentPercentageCPU := range percentageCPU {
+		metricName := fmt.Sprintf("CPUutilization%v", i)
+		metricsDump.MetricsGauge[metricName] = gauge(currentPercentageCPU)
+	}
+
+	return nil
 }

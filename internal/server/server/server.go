@@ -1,59 +1,91 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	chimiddleware "github.com/go-chi/chi/middleware"
 	"metrics/internal/server/config"
-	"metrics/internal/server/handlers"
+	"metrics/internal/server/middleware"
 	"metrics/internal/server/storage"
 )
 
 type Server struct {
-	startTime time.Time
+	storage   storage.MetricStorager
 	chiRouter chi.Router
+	config    config.Config
+	startTime time.Time
 }
 
-func newRouter(memStatsStorage storage.MemStatsMemoryRepo) chi.Router {
+func NewServer(config config.Config) *Server {
+	log.Println(config)
+
+	return &Server{
+		config: config,
+	}
+}
+
+func (server *Server) selectStorage() storage.MetricStorager {
+	storageConfig := server.config.Store
+
+	if storageConfig.DatabaseDSN != "" {
+		log.Println("DB Storage")
+		repository, err := storage.NewDBRepo(storageConfig)
+		if err != nil {
+			panic(err)
+		}
+
+		return repository
+	}
+
+	log.Println("Memory Storage")
+	repository := storage.NewMetricsMemoryRepo(storageConfig)
+
+	return repository
+}
+
+func (server *Server) initStorage() {
+	metricsMemoryRepo := server.selectStorage()
+	server.storage = metricsMemoryRepo
+
+	if server.config.Store.Restore {
+		server.storage.InitFromFile()
+	}
+}
+
+func (server *Server) initRouter() {
 	router := chi.NewRouter()
 
-	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
+	router.Use(chimiddleware.RequestID)
+	router.Use(chimiddleware.RealIP)
+	router.Use(chimiddleware.Logger)
+	router.Use(chimiddleware.Recoverer)
+	router.Use(middleware.GzipHandle)
 
-	//Маршруты
-	router.Get("/", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.PrintStatsValues(writer, request, memStatsStorage)
+	router.Get("/", server.PrintAllMetricStatic)
+	router.Get("/ping", server.PingGetJSON)
+	router.Get("/value/{statType}/{statName}", server.PrintMetricGet)
+
+	router.Post("/value/", server.MetricValuePostJSON)
+	router.Post("/updates/", server.UpdateMetricBatchJSON)
+
+	router.Route("/update/", func(router chi.Router) {
+		router.Post("/", server.UpdateMetricPostJSON)
+
+		router.Post("/gauge/{statName}/{statValue}", server.UpdateGaugePost)
+		router.Post("/counter/{statName}/{statValue}", server.UpdateCounterPost)
+		router.Post("/{statType}/{statName}/{statValue}", server.UpdateNotImplementedPost)
 	})
 
-	router.Get("/value/{statType}/{statName}", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.PrintStatValue(writer, request, memStatsStorage)
-	})
-
-	router.Route("/update", func(router chi.Router) {
-		router.Post("/gauge/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
-			handlers.UpdateGaugePost(writer, request, memStatsStorage)
-		})
-		router.Post("/counter/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
-			handlers.UpdateCounterPost(writer, request, memStatsStorage)
-		})
-		router.Post("/{statType}/{statName}/{statValue}", func(writer http.ResponseWriter, request *http.Request) {
-			handlers.UpdateNotImplementedPost(writer, request)
-		})
-	})
-
-	return router
+	server.chiRouter = router
 }
 
 func (server *Server) Run() {
-	memStatsStorage := storage.NewMemStatsMemoryRepo()
-	server.chiRouter = newRouter(memStatsStorage)
+	server.initStorage()
+	defer server.storage.Close()
+	server.initRouter()
 
-	fullHostAddr := fmt.Sprintf("%v:%v", config.ConfigHostname, config.ConfigPort)
-	log.Fatal(http.ListenAndServe(fullHostAddr, server.chiRouter))
+	log.Fatal(http.ListenAndServe(server.config.ServerAddr, server.chiRouter))
 }

@@ -1,8 +1,12 @@
 package main
 
-import "metrics/internal/server/server"
+import (
+	"metrics/internal/server/config"
+	"metrics/internal/server/server"
+)
 
 func main() {
-	var httpServer server.Server
-	httpServer.Run()
+	appConfig := config.LoadConfig()
+	appServer := server.NewServer(appConfig)
+	appServer.Run()
 }
