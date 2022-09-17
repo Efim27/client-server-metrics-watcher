@@ -178,6 +178,11 @@ func (metricsMemoryRepo MetricsMemoryRepo) UploadToFile() error {
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) IterativeUploadToFile() {
+	interval := metricsMemoryRepo.config.Interval
+	if interval == time.Duration(0) {
+		return
+	}
+
 	tickerUpload := time.NewTicker(metricsMemoryRepo.config.Interval)
 
 	go func() {
