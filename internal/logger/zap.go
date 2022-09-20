@@ -30,6 +30,7 @@ func getLoggerTee(logFile *os.File, config zapcore.EncoderConfig, defaultLogLeve
 // InitializeLogger
 // Если logFile является nil, то записи в файл не будет
 func InitializeLogger(logFile *os.File, defaultLogLevel zapcore.Level) (logger *zap.Logger) {
+	logFile = nil
 	config := zap.NewProductionEncoderConfig()
 	config.EncodeTime = zapcore.ISO8601TimeEncoder
 
