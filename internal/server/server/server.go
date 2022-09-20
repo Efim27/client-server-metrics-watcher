@@ -28,7 +28,6 @@ type Server struct {
 }
 
 func NewServer(config config.Config) *Server {
-	log.Println(111)
 	server := &Server{
 		config: config,
 	}
@@ -40,7 +39,6 @@ func NewServer(config config.Config) *Server {
 }
 
 func mustInitLogger(server *Server) {
-	log.Println(222)
 	logLevel := zap.InfoLevel
 	if server.config.DebugMode {
 		logLevel = zap.DebugLevel
@@ -113,7 +111,6 @@ func (server *Server) initRouter() {
 }
 
 func (server *Server) Run(ctx context.Context) {
-	log.Println(333)
 	server.logger.Info("start")
 
 	server.initStorage()

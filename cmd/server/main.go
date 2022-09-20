@@ -18,17 +18,12 @@ func Profiling(addr string) {
 func main() {
 	ctx := context.Background()
 
-	log.Println(1111)
 	appConfig := config.LoadConfig()
-	log.Println(2222)
 	appServer := server.NewServer(appConfig)
-	log.Println(3333)
 
 	if appServer.Config().ProfilingAddr != "" {
-		log.Println(4444)
 		go Profiling(appServer.Config().ProfilingAddr)
 	}
-
-	log.Println(5555)
+	
 	appServer.Run(ctx)
 }
