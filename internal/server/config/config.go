@@ -8,43 +8,33 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-// StoreConfig
-//
-// интервал выгрузки на диск: env: STORE_INTERVAL; flag: i; default: 300s
-//
-// DSN БД: env: DATABASE_DSN; flag: d
-//
-// файл для выгрузки: env: STORE_FILE; flag: f; default: /tmp/devops-metrics-db.json
-//
-// чтение значений с диска при запуске: env: RESTORE; flag: r; default: false
+// StoreConfig используется для хранения конфигурации агента, связанной с хранилищами.
 type StoreConfig struct {
-	Interval    time.Duration `env:"STORE_INTERVAL"`
-	DatabaseDSN string        `env:"DATABASE_DSN"`
-	File        string        `env:"STORE_FILE"`
-	Restore     bool          `env:"RESTORE"`
+	// Interval - интервал выгрузки на диск (flag: i; default: 300s)
+	Interval time.Duration `env:"STORE_INTERVAL"`
+	// DatabaseDSN - DSN БД (flag: d)
+	DatabaseDSN string `env:"DATABASE_DSN"`
+	// File - файл для выгрузки (flag: f; default: /tmp/devops-metrics-db.json)
+	File string `env:"STORE_FILE"`
+	// Restore - чтение значений с диска при запуске (flag: r; default: false)
+	Restore bool `env:"RESTORE"`
 }
 
-// Config
-//
-// адрес сервера: env: ADDRESS; flag: a; default: 127.0.0.1:8080
-//
-// адрес WEB UI профилировщика: env: PROF_ADDRESS; flag: pa; default: 127.0.0.1:8090
-//
-// абсолютный путь до шаблонов HTML: env: TEMPLATES_ABS_PATH; default: ./templates
-//
-// ключ для подписи сообщений: env: RESTORE; flag: k
-//
-// лог файл: env: LOG_FILE; flag: l
-//
-// debug мод: env: DEBUG; flag: debug; default: false
+// Config используется для хранения конфигурации сервера.
 type Config struct {
-	ServerAddr       string `env:"ADDRESS"`      //host:port
-	ProfilingAddr    string `env:"PROF_ADDRESS"` //host:port
+	// ServerAddr - адрес сервера (flag: a; default: 127.0.0.1:8080)
+	ServerAddr string `env:"ADDRESS"`
+	// ProfilingAddr -  адрес WEB сервера профилировщика, не работает если пустое значение (flag: pa; default: 127.0.0.1:8090)
+	ProfilingAddr string `env:"PROF_ADDRESS"`
+	// TemplatesAbsPath - абсолютный путь до шаблонов HTML (default: ./templates)
 	TemplatesAbsPath string `env:"TEMPLATES_ABS_PATH"`
-	SignKey          string `env:"KEY"`
-	LogFile          string `env:"LOG_FILE"`
-	DebugMode        bool   `env:"DEBUG"`
-	Store            StoreConfig
+	// SignKey - ключ для подписи сообщений (flag: k)
+	SignKey string `env:"KEY"`
+	// LogFile - лог файл (flag: l)
+	LogFile string `env:"LOG_FILE"`
+	// DebugMode - debug мод (flag: debug; default: false)
+	DebugMode bool `env:"DEBUG"`
+	Store     StoreConfig
 }
 
 func newConfig() *Config {
@@ -54,6 +44,7 @@ func newConfig() *Config {
 	return &config
 }
 
+// initDefaultValues - значения конфига по умолчанию.
 func (config *Config) initDefaultValues() {
 	config.ServerAddr = "127.0.0.1:8080"
 	config.ProfilingAddr = "127.0.0.1:8090"

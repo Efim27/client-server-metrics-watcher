@@ -21,6 +21,9 @@ func main() {
 	appConfig := config.LoadConfig()
 	appServer := server.NewServer(appConfig)
 
-	go Profiling(appServer.Config().ProfilingAddr)
+	if appServer.Config().ProfilingAddr != "" {
+		go Profiling(appServer.Config().ProfilingAddr)
+	}
+	
 	appServer.Run(ctx)
 }

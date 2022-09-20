@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// MemoryRepo - потокобезопасное хранилище в ОП
+// MemoryRepo - потокобезопасное хранилище в ОП.
 type MemoryRepo struct {
 	db map[string]MetricValue
 	*sync.RWMutex

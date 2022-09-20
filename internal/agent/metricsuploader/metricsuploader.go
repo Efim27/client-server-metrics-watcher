@@ -1,4 +1,4 @@
-// Package metricsuploader - HTTP клиент для отправки метрик на сервер
+// Package metricsuploader - HTTP клиент для отправки метрик на сервер.
 package metricsuploader
 
 import (
@@ -125,7 +125,7 @@ func (metricsUplader *MetricsUplader) oneStatUploadJSON(mType string, name strin
 	return nil
 }
 
-// MetricsUploadSync - конкурентная отправка метрик
+// MetricsUploadSync - конкурентная отправка метрик.
 // Deprecated: используйте MetricsUploadBatch
 func (metricsUplader *MetricsUplader) MetricsUploadSync(metricsDump statsreader.MetricsDump) (err error) {
 	metricsDump.RLock()
@@ -154,7 +154,7 @@ func (metricsUplader *MetricsUplader) MetricsUploadSync(metricsDump statsreader.
 	return
 }
 
-// MetricsUploadAsync - конкурентная отправка метрик
+// MetricsUploadAsync - конкурентная отправка метрик.
 // Deprecated: используйте MetricsUploadBatch
 func (metricsUplader *MetricsUplader) MetricsUploadAsync(metricsDump statsreader.MetricsDump) error {
 	metricsDump.RLock()
@@ -184,7 +184,7 @@ func (metricsUplader *MetricsUplader) MetricsUploadAsync(metricsDump statsreader
 	return err
 }
 
-// MetricsUploadBatch - отправка метрик 1 запросом в формате JSON
+// MetricsUploadBatch - отправка метрик 1 запросом в формате JSON.
 func (metricsUplader *MetricsUplader) MetricsUploadBatch(metricsDump statsreader.MetricsDump) error {
 	metricsDump.RLock()
 	defer metricsDump.RUnlock()

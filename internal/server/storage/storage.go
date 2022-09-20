@@ -1,4 +1,4 @@
-// Package storage - хранилища метрик
+// Package storage - хранилища метрик.
 package storage
 
 const (
