@@ -4,11 +4,11 @@
 package server
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi"
-	"go.uber.org/zap"
 	"metrics/internal/server/storage"
 )
 
@@ -44,7 +44,8 @@ func (server Server) UpdateGaugePost(rw http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	server.logger.Debug("update gauge metric", zap.String("name", statName), zap.String("value", statValue))
+	log.Println("Update gauge:")
+	log.Printf("%v: %v\n", statName, statValue)
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte("Ok"))
 }
@@ -80,7 +81,8 @@ func (server Server) UpdateCounterPost(rw http.ResponseWriter, request *http.Req
 		return
 	}
 
-	server.logger.Debug("increment counter metric", zap.String("name", statName), zap.String("value", statValue))
+	log.Println("Inc counter:")
+	log.Printf("%v: %v\n", statName, statValue)
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte("Ok"))
 }
@@ -96,7 +98,7 @@ func (server Server) UpdateCounterPost(rw http.ResponseWriter, request *http.Req
 // @Failure 501
 // @Router /update/{statType}/{statName}/{statValue} [post]
 func (server Server) UpdateNotImplementedPost(rw http.ResponseWriter, _ *http.Request) {
-	server.logger.Debug("update not implemented statType")
+	log.Println("Update not implemented statType")
 
 	rw.WriteHeader(http.StatusNotImplemented)
 	rw.Write([]byte("Not implemented"))

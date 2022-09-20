@@ -4,23 +4,18 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	_ "net/http/pprof"
 
 	"github.com/go-chi/chi"
 	chimiddleware "github.com/go-chi/chi/middleware"
-	"go.uber.org/zap"
-	"metrics/internal/logger"
 	"metrics/internal/server/config"
 	"metrics/internal/server/middleware"
 	"metrics/internal/server/storage"
 )
 
 type Server struct {
-	logFile   *os.File
-	logger    *zap.Logger
 	storage   storage.MetricStorager
 	chiRouter chi.Router
 	config    config.Config
@@ -28,40 +23,18 @@ type Server struct {
 }
 
 func NewServer(config config.Config) *Server {
-	server := &Server{
+	log.Println(config)
+
+	return &Server{
 		config: config,
 	}
-	log.Println(config)
-	mustInitLogger(server)
-	server.logger.Info("load config successfully", zap.Any("config", server.config))
-
-	return server
-}
-
-func mustInitLogger(server *Server) {
-	logLevel := zap.InfoLevel
-	if server.config.DebugMode {
-		logLevel = zap.DebugLevel
-	}
-
-	if server.config.LogFile != "" {
-		logFile, err := os.OpenFile(server.config.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			panic("cant open log file")
-		}
-
-		server.logFile = logFile
-	}
-
-	server.logger = logger.InitializeLogger(server.logFile, logLevel)
-	server.logger.Info("debug mode enabled")
 }
 
 func (server *Server) selectStorage() storage.MetricStorager {
 	storageConfig := server.config.Store
 
 	if storageConfig.DatabaseDSN != "" {
-		server.logger.Info("use database storage")
+		log.Println("DB Storage")
 		repository, err := storage.NewDBRepo(storageConfig)
 		if err != nil {
 			panic(err)
@@ -70,7 +43,7 @@ func (server *Server) selectStorage() storage.MetricStorager {
 		return repository
 	}
 
-	server.logger.Info("use memory storage")
+	log.Println("Memory Storage")
 	repository := storage.NewMetricsMemoryRepo(storageConfig)
 
 	return repository
@@ -111,10 +84,7 @@ func (server *Server) initRouter() {
 }
 
 func (server *Server) Run(ctx context.Context) {
-	server.logger.Info("start")
-
 	server.initStorage()
-	server.logger.Info("init storage successfully")
 	defer server.storage.Close()
 
 	server.initRouter()
@@ -126,14 +96,14 @@ func (server *Server) Run(ctx context.Context) {
 	go func() {
 		err := serverHTTP.ListenAndServe()
 		if err != nil {
-			server.logger.Info("HTTP server closed", zap.Error(err))
+			log.Println(err)
 		}
 	}()
 
 	<-ctx.Done()
 	err := serverHTTP.Close()
 	if err != nil {
-		server.logger.Fatal("HTTP server stop error", zap.Error(err))
+		log.Println(err)
 	}
 }
 

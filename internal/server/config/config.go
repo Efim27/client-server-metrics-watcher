@@ -30,8 +30,6 @@ type Config struct {
 	TemplatesAbsPath string `env:"TEMPLATES_ABS_PATH"`
 	// SignKey - ключ для подписи сообщений (flag: k)
 	SignKey string `env:"KEY"`
-	// LogFile - лог файл (flag: l)
-	LogFile string `env:"LOG_FILE"`
 	// DebugMode - debug мод (flag: debug; default: false)
 	DebugMode bool `env:"DEBUG"`
 	Store     StoreConfig
@@ -53,7 +51,6 @@ func (config *Config) initDefaultValues() {
 		File:     "/tmp/devops-metrics-db.json",
 		Restore:  true,
 	}
-	config.DebugMode = false
 }
 
 func (config *Config) parseEnv() error {
@@ -64,7 +61,6 @@ func (config *Config) parseFlags() {
 	flag.StringVar(&config.ServerAddr, "a", config.ServerAddr, "server address (host:port)")
 	flag.StringVar(&config.ProfilingAddr, "pa", config.ProfilingAddr, "profiling address (host:port)")
 	flag.StringVar(&config.SignKey, "k", config.SignKey, "sign key")
-	flag.StringVar(&config.LogFile, "l", config.LogFile, "path to log file")
 	flag.BoolVar(&config.DebugMode, "debug", config.DebugMode, "debug mode")
 
 	//StoreConfig

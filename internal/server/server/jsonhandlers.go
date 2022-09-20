@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/asaskevich/govalidator"
-	"go.uber.org/zap"
 	"metrics/internal/server/responses"
 	"metrics/internal/server/storage"
 )
@@ -108,7 +107,6 @@ func (server Server) UpdateMetricBatchJSON(rw http.ResponseWriter, request *http
 		}
 	}
 
-	server.logger.Debug("metrics batch update", zap.Any("batch", MetricBatch))
 	err = server.storage.UpdateManySliceMetric(MetricBatch)
 	if err != nil {
 		http.Error(rw, response.SetStatusError(err).GetJSONString(), http.StatusBadRequest)

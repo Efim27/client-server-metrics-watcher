@@ -65,8 +65,8 @@ func (config *Config) parseFlags() {
 	flag.DurationVar(&config.PollInterval, "p", config.PollInterval, "poll interval (example: 10s)")
 	flag.StringVar(&config.HTTPClientConnection.ServerAddr, "a", config.HTTPClientConnection.ServerAddr, "server address (host:port)")
 	flag.StringVar(&config.SignKey, "k", config.SignKey, "sign key")
-	flag.StringVar(&config.LogFile, "l", config.LogFile, "path to log file")
-	flag.BoolVar(&config.DebugMode, "d", config.DebugMode, "debug mode")
+	flag.StringVar(&config.LogFile, "l", config.LogFile, "path to log file, to disable use empty path \"\"")
+	flag.BoolVar(&config.DebugMode, "d", config.DebugMode, "debug mode \"\"")
 	flag.Parse()
 }
 

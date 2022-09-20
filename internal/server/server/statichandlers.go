@@ -2,9 +2,8 @@ package server
 
 import (
 	"html/template"
+	"log"
 	"net/http"
-
-	"go.uber.org/zap"
 )
 
 // PrintAllMetricStatic
@@ -18,13 +17,13 @@ func (server Server) PrintAllMetricStatic(rw http.ResponseWriter, _ *http.Reques
 	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	t, err := template.ParseFiles(server.config.TemplatesAbsPath + "/index.html")
 	if err != nil {
-		server.logger.Error("cant parse template", zap.Error(err))
+		log.Println("Cant parse template ", err)
 		return
 	}
 
 	err = t.Execute(rw, server.storage.ReadAll())
 	if err != nil {
-		server.logger.Error("cant render template", zap.Error(err))
+		log.Println("Cant render template ", err)
 		return
 	}
 }

@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
+
 	"metrics/internal/server/config"
 )
 
@@ -313,13 +315,13 @@ func (repository DBRepo) InitFromFile() {
 	var metricsDump map[string]MetricMap
 	err = json.NewDecoder(file).Decode(&metricsDump)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 
 	for _, metricList := range metricsDump {
 		err = repository.UpdateMany(metricList)
 	}
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 }

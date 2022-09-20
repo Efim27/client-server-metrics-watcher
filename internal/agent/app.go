@@ -45,7 +45,6 @@ func NewAppHTTP(config config.Config) *AppHTTP {
 	app.metricsUplader = metricsuploader.NewMetricsUploader(app.config.HTTPClientConnection, app.config.SignKey)
 
 	mustInitLogger(app)
-	app.logger.Info("load config successfully", zap.Any("config", app.config))
 
 	return app
 }
