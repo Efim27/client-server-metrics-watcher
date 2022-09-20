@@ -92,7 +92,7 @@ func TestMemoryRepoUpdateValues(t *testing.T) {
 
 	var metricValue1 int64 = 7
 	var metricValue2 int64 = 22
-	var metricValue3 float64 = 27.5
+	var metricValue3 = 27.5
 
 	err = metricsMemoryRepo.Update("PollCount", MetricValue{
 		MType: MeticTypeCounter,
@@ -193,7 +193,7 @@ func TestMemoryRepoUpdateMany(t *testing.T) {
 
 	var metricValueDelta1 int64 = 11
 	var metricValueDelta2 int64 = 22
-	var metricValueDelta3 float64 = 27.5
+	var metricValueDelta3 = 27.5
 
 	metricValueList := map[string]MetricValue{
 		"PollCount1": {
@@ -234,7 +234,7 @@ func TestMemoryRepoUpdateManySlice(t *testing.T) {
 
 	var metricValueDelta1 int64 = 11
 	var metricValueDelta2 int64 = 22
-	var metricValueDelta3 float64 = 27.5
+	var metricValueDelta3 = 27.5
 
 	metricValueList := []Metric{
 		{
