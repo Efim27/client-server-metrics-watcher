@@ -81,7 +81,6 @@ func LoadConfig() Config {
 	config.parseFlags()
 	err := config.parseEnv()
 	if err != nil {
-		log.Println(777)
 		log.Fatal(err)
 	}
 
