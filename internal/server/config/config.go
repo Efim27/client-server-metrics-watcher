@@ -47,7 +47,6 @@ func newConfig() *Config {
 // initDefaultValues - значения конфига по умолчанию.
 func (config *Config) initDefaultValues() {
 	config.ServerAddr = "127.0.0.1:8080"
-	config.ProfilingAddr = "127.0.0.1:8090"
 	config.TemplatesAbsPath = "./templates"
 	config.Store = StoreConfig{
 		Interval: time.Duration(300) * time.Second,

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -30,6 +31,7 @@ func NewServer(config config.Config) *Server {
 	server := &Server{
 		config: config,
 	}
+	log.Println(config)
 	mustInitLogger(server)
 	server.logger.Info("load config successfully", zap.Any("config", server.config))
 
