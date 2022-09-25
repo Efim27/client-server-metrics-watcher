@@ -58,7 +58,7 @@ func (metric MetricValue) GetHash(id, signKey string) []byte {
 	return signerHMAC.Sum(nil)
 }
 
-//MetricsMemoryRepo - репо в оперативной памяти для приходящей статистики
+//MetricsMemoryRepo - репозиторий в оперативной памяти для приходящей статистики.
 type MetricsMemoryRepo struct {
 	uploadMutex    *sync.RWMutex
 	gaugeStorage   *MemoryRepo
@@ -179,6 +179,11 @@ func (metricsMemoryRepo MetricsMemoryRepo) UploadToFile() error {
 }
 
 func (metricsMemoryRepo MetricsMemoryRepo) IterativeUploadToFile() {
+	interval := metricsMemoryRepo.config.Interval
+	if interval == time.Duration(0) {
+		return
+	}
+
 	tickerUpload := time.NewTicker(metricsMemoryRepo.config.Interval)
 
 	go func() {

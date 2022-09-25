@@ -1,3 +1,4 @@
+// Package statsreader - считыватель runtime метрик
 package statsreader
 
 import (
@@ -13,6 +14,7 @@ import (
 type gauge float64
 type counter int64
 
+// MetricsDump - потокобезопасное хранилище метрик.
 type MetricsDump struct {
 	*sync.RWMutex
 	MetricsGauge   map[string]gauge
@@ -27,6 +29,7 @@ func NewMetricsDump() (*MetricsDump, error) {
 	}, nil
 }
 
+// Refresh - считыватель метрик.
 func (metricsDump *MetricsDump) Refresh() {
 	var MemStatistics runtime.MemStats
 	runtime.ReadMemStats(&MemStatistics)
@@ -71,6 +74,7 @@ func (metricsDump *MetricsDump) Refresh() {
 	metricsDump.MetricsCounter["PollCount"] = metricsDump.MetricsCounter["PollCount"] + 1
 }
 
+// RefreshExtra - считыватель дополнительных метрик.
 func (metricsDump *MetricsDump) RefreshExtra() error {
 	metrics, err := mem.VirtualMemory()
 	if err != nil {

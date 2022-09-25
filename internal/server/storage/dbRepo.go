@@ -15,7 +15,7 @@ import (
 	"metrics/internal/server/config"
 )
 
-//dbRepo - репо в БД для приходящей статистики
+// DBRepo - хранилище метрик в SQL БД.
 type DBRepo struct {
 	config config.StoreConfig
 	db     *sql.DB

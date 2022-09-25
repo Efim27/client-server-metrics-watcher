@@ -1,3 +1,4 @@
+// Package contenttype - функции для удобной работы с Content Type HTTP запроса
 package contenttype
 
 import (

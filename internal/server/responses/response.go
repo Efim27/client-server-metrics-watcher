@@ -1,3 +1,4 @@
+// Package responses - шаблон ответов сервера в формате JSON
 package responses
 
 const (
