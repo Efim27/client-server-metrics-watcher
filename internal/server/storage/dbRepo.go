@@ -41,6 +41,10 @@ func NewDBRepo(config config.StoreConfig) (DBRepo, error) {
 	return repository, nil
 }
 
+func (repository DBRepo) DB() *sql.DB {
+	return repository.db
+}
+
 func (repository DBRepo) PrepareDB() {
 	repository.db.SetMaxOpenConns(20)
 	repository.db.SetMaxIdleConns(20)

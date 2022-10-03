@@ -1,67 +1,103 @@
+//go:build integration
+// +build integration
+
 package storage
 
 import (
+	"database/sql"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	_ "github.com/lib/pq"
+	"github.com/stretchr/testify/suite"
+	"gopkg.in/khaiql/dbcleaner.v2"
+	"gopkg.in/khaiql/dbcleaner.v2/engine"
 	"metrics/internal/server/config"
 )
 
 // testing DB, run docker-compose up before testing
 const DSN = "postgres://postgres:Ug6v3NkkE623@localhost:5434/postgres?sslmode=disable"
 
-func TestDBRepo_InitTables(t *testing.T) {
+type MetricsDBRepoSuite struct {
+	suite.Suite
+	metricsRepo *DBRepo
+	db          *sql.DB
+	cleaner     dbcleaner.DbCleaner
+}
+
+func (suite *MetricsDBRepoSuite) SetupSuite() {
 	metricsRepo, err := NewDBRepo(config.StoreConfig{
 		DatabaseDSN: DSN,
 	})
-	require.NoError(t, err)
-
-	err = metricsRepo.Ping()
-	require.NoError(t, err)
+	suite.NoError(err)
+	suite.metricsRepo = &metricsRepo
+	suite.db = metricsRepo.DB()
 
 	err = metricsRepo.InitTables()
-	require.NoError(t, err)
+	suite.NoError(err)
 
-	err = metricsRepo.Close()
-	require.NoError(t, err)
+	cleanerEngine := engine.NewPostgresEngine(DSN)
+	suite.cleaner = dbcleaner.New()
+	suite.cleaner.SetEngine(cleanerEngine)
 }
 
-func TestDBRepo_ReadEmpty(t *testing.T) {
+func (suite *MetricsDBRepoSuite) TearDownSuite() {
+	err := suite.metricsRepo.Close()
+	suite.NoError(err)
+
+	err = suite.cleaner.Close()
+	suite.NoError(err)
+}
+
+func (suite *MetricsDBRepoSuite) SetupTest() {
+	suite.cleaner.Acquire("counter")
+	suite.cleaner.Acquire("gauge")
+}
+
+func (suite *MetricsDBRepoSuite) TearDownTest() {
+	suite.cleaner.Clean("counter")
+	suite.cleaner.Clean("gauge")
+}
+
+func (suite *MetricsDBRepoSuite) TestDBRepo_Ping() {
+	err := suite.metricsRepo.Ping()
+	suite.NoError(err)
+}
+
+func (suite *MetricsDBRepoSuite) TestDBRepo_ReadEmpty() {
 	metricsRepo, err := NewDBRepo(config.StoreConfig{
 		DatabaseDSN: DSN,
 	})
-	require.NoError(t, err)
+	suite.NoError(err)
 
 	err = metricsRepo.Ping()
-	require.NoError(t, err)
+	suite.NoError(err)
 
 	_, err = metricsRepo.Read("PollCount", MeticTypeCounter)
-	require.Error(t, err)
+	suite.Error(err)
 
 	err = metricsRepo.Close()
-	require.NoError(t, err)
+	suite.NoError(err)
 }
 
-func TestDBRepo_ReadWrite(t *testing.T) {
-	metricsRepo, err := NewDBRepo(config.StoreConfig{
-		DatabaseDSN: DSN,
-	})
-	require.NoError(t, err)
-
-	err = metricsRepo.Ping()
-	require.NoError(t, err)
+func (suite *MetricsDBRepoSuite) TestDBRepo_ReadWrite() {
+	err := suite.metricsRepo.Ping()
+	suite.NoError(err)
 
 	var metricValue1 int64 = 7
-	err = metricsRepo.Update("PollCount", MetricValue{
+	err = suite.metricsRepo.Update("PollCount", MetricValue{
 		MType: MeticTypeCounter,
 		Delta: &metricValue1,
 	})
-	require.NoError(t, err)
+	suite.NoError(err)
 
-	metricValue, err := metricsRepo.Read("PollCount", MeticTypeCounter)
-	require.NoError(t, err)
-	require.EqualValues(t, metricValue1, *metricValue.Delta)
+	metricValue, err := suite.metricsRepo.Read("PollCount", MeticTypeCounter)
+	suite.NoError(err)
+	suite.EqualValues(metricValue1, *metricValue.Delta)
 
-	err = metricsRepo.Close()
-	require.NoError(t, err)
+	err = suite.metricsRepo.Close()
+	suite.NoError(err)
+}
+
+func TestUploaderSuite(t *testing.T) {
+	suite.Run(t, new(MetricsDBRepoSuite))
 }
