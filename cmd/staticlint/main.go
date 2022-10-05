@@ -19,12 +19,15 @@ import (
 	"metrics/internal/linters/exit"
 )
 
+// MultiCheckerRules is slice of checkers with methods for connecting external checks
 type MultiCheckerRules []*analysis.Analyzer
 
+// printCount print count of checkers
 func (m *MultiCheckerRules) printCount() {
 	fmt.Printf("Loaded %d checkers \n", len(*m))
 }
 
+// addPassesRules add passes checkers to multi checker
 func (m *MultiCheckerRules) addPassesRules() {
 	*m = append(*m,
 		unmarshal.Analyzer,
@@ -35,6 +38,7 @@ func (m *MultiCheckerRules) addPassesRules() {
 		structtag.Analyzer)
 }
 
+// addStaticCheckRulesQT add static check checkers to multi checker
 func (m *MultiCheckerRules) addStaticCheckRulesSA() {
 	for _, v := range staticcheck.Analyzers {
 		if strings.Contains(v.Analyzer.Name, "SA") {
@@ -43,7 +47,8 @@ func (m *MultiCheckerRules) addStaticCheckRulesSA() {
 	}
 }
 
-func (m *MultiCheckerRules) addStaticCheckRulesQT() {
+// addStaticCheckRulesQT add quickfix checkers to multi checker
+func (m *MultiCheckerRules) addStaticCheckRulesQF() {
 	for _, v := range quickfix.Analyzers {
 		*m = append(*m, v.Analyzer)
 	}
@@ -54,7 +59,7 @@ func main() {
 
 	checkerRules.addPassesRules()
 	checkerRules.addStaticCheckRulesSA()
-	checkerRules.addStaticCheckRulesQT()
+	checkerRules.addStaticCheckRulesQF()
 
 	checkerRules = append(checkerRules, sqlrows.Analyzer)
 	checkerRules = append(checkerRules, predeclared.Analyzer)
