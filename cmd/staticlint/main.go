@@ -16,6 +16,7 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unreachable"
 	"honnef.co/go/tools/quickfix"
 	"honnef.co/go/tools/staticcheck"
+	"metrics/internal/linters/exit"
 )
 
 type MultiCheckerRules []*analysis.Analyzer
@@ -57,6 +58,7 @@ func main() {
 
 	checkerRules = append(checkerRules, sqlrows.Analyzer)
 	checkerRules = append(checkerRules, predeclared.Analyzer)
+	checkerRules = append(checkerRules, exit.ExitCheckAnalyzer)
 
 	checkerRules.printCount()
 	multichecker.Main(
