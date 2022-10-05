@@ -5,28 +5,71 @@ package storage
 
 import (
 	"database/sql"
+	"fmt"
+	"log"
 	"testing"
 
 	_ "github.com/lib/pq"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/khaiql/dbcleaner.v2"
 	"gopkg.in/khaiql/dbcleaner.v2/engine"
 	"metrics/internal/server/config"
 )
 
-// testing DB, run docker-compose up before testing
-const DSN = "postgres://postgres:Ug6v3NkkE623@localhost:5434/postgres?sslmode=disable"
-
 type MetricsDBRepoSuite struct {
 	suite.Suite
-	metricsRepo *DBRepo
-	db          *sql.DB
-	cleaner     dbcleaner.DbCleaner
+	metricsRepo        *DBRepo
+	db                 *sql.DB
+	cleaner            dbcleaner.DbCleaner
+	testingContainerDB *dockertest.Resource
+	testingPoolDB      *dockertest.Pool
 }
 
 func (suite *MetricsDBRepoSuite) SetupSuite() {
-	metricsRepo, err := NewDBRepo(config.StoreConfig{
-		DatabaseDSN: DSN,
+	var err error
+
+	suite.testingPoolDB, err = dockertest.NewPool("")
+	if err != nil {
+		log.Fatalf("Could not connect to docker: %s", err)
+	}
+
+	log.Println("TestingDB container starting...")
+	suite.testingContainerDB, err = suite.testingPoolDB.RunWithOptions(&dockertest.RunOptions{
+		Repository: "postgres",
+		Tag:        "latest",
+		Env: []string{
+			"POSTGRES_DB=postgres",
+			"POSTGRES_USER=postgres",
+			"POSTGRES_PASSWORD=Ug6v3NkkE623",
+		},
+	}, func(config *docker.HostConfig) {
+		config.AutoRemove = true
+		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
+	})
+
+	containerHostPort := suite.testingContainerDB.GetHostPort("5432/tcp")
+	DSN := fmt.Sprintf("postgres://postgres:Ug6v3NkkE623@%s/postgres?sslmode=disable", containerHostPort)
+
+	if err != nil {
+		log.Fatalf("Could not start resource: %s", err)
+	}
+	log.Println("TestingDB container is started")
+
+	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
+	var metricsRepo DBRepo
+	err = suite.testingPoolDB.Retry(func() error {
+		metricsRepo, err = NewDBRepo(config.StoreConfig{
+			DatabaseDSN: DSN,
+		})
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		log.Println(metricsRepo.Ping())
+		return metricsRepo.Ping()
 	})
 	suite.NoError(err)
 	suite.metricsRepo = &metricsRepo
@@ -41,6 +84,13 @@ func (suite *MetricsDBRepoSuite) SetupSuite() {
 }
 
 func (suite *MetricsDBRepoSuite) TearDownSuite() {
+	defer func() {
+		err := suite.testingPoolDB.Purge(suite.testingContainerDB)
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+
 	err := suite.metricsRepo.Close()
 	suite.NoError(err)
 
@@ -64,19 +114,11 @@ func (suite *MetricsDBRepoSuite) TestDBRepo_Ping() {
 }
 
 func (suite *MetricsDBRepoSuite) TestDBRepo_ReadEmpty() {
-	metricsRepo, err := NewDBRepo(config.StoreConfig{
-		DatabaseDSN: DSN,
-	})
+	err := suite.metricsRepo.Ping()
 	suite.NoError(err)
 
-	err = metricsRepo.Ping()
-	suite.NoError(err)
-
-	_, err = metricsRepo.Read("PollCount", MeticTypeCounter)
+	_, err = suite.metricsRepo.Read("PollCount", MeticTypeCounter)
 	suite.Error(err)
-
-	err = metricsRepo.Close()
-	suite.NoError(err)
 }
 
 func (suite *MetricsDBRepoSuite) TestDBRepo_ReadWrite() {
@@ -93,9 +135,6 @@ func (suite *MetricsDBRepoSuite) TestDBRepo_ReadWrite() {
 	metricValue, err := suite.metricsRepo.Read("PollCount", MeticTypeCounter)
 	suite.NoError(err)
 	suite.EqualValues(metricValue1, *metricValue.Delta)
-
-	err = suite.metricsRepo.Close()
-	suite.NoError(err)
 }
 
 func TestUploaderSuite(t *testing.T) {

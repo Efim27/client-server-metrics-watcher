@@ -13,14 +13,5 @@ services:
     volumes:
       - app-volume:/var/lib/postgresql/data
 
-  db-test:
-    image: postgres
-    environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=Ug6v3NkkE623
-    ports:
-      - ${POSTGRES_TEST_PORT}:5432
-
 volumes:
   app-volume:
