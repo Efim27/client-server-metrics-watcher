@@ -6,12 +6,17 @@ import (
 	"crypto/sha512"
 	"crypto/x509"
 	"encoding/pem"
+	"io/ioutil"
 	"log"
 )
 
-func ParsePublicKeyRSA(key string) (*rsa.PublicKey, error) {
-	block, _ := pem.Decode([]byte(key))
+func ParsePublicKeyRSA(path string) (*rsa.PublicKey, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
 
+	block, _ := pem.Decode(bytes)
 	pub, err := x509.ParsePKCS1PublicKey(block.Bytes)
 	if err != nil {
 		return nil, err
@@ -20,9 +25,13 @@ func ParsePublicKeyRSA(key string) (*rsa.PublicKey, error) {
 	return pub, err
 }
 
-func ParsePrivateKeyRSA(key string) (*rsa.PrivateKey, error) {
-	block, _ := pem.Decode([]byte(key))
-
+func ParsePrivateKeyRSA(path string) (*rsa.PrivateKey, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	
+	block, _ := pem.Decode(bytes)
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
 		return nil, err
