@@ -94,7 +94,7 @@ func (server *Server) Run(ctx context.Context) {
 	}
 
 	go func() {
-		err := serverHTTP.ListenAndServe()
+		err := serverHTTP.ListenAndServeTLS("./keysSSL/server.crt", "./keysSSL/server.key")
 		if err != nil {
 			log.Println(err)
 		}
