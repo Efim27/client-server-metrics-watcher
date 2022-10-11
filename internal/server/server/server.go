@@ -116,6 +116,13 @@ func (server *Server) Run(ctx context.Context) (err error) {
 	go func() {
 		<-ctx.Done()
 
+		if server.config.Store.Interval != storage.SyncUploadSymbol {
+			err = server.storage.Save()
+			if err != nil {
+				log.Println(err)
+			}
+		}
+
 		if err = serverHTTP.Shutdown(context.Background()); err != nil {
 			log.Printf("HTTP server shutdown error: %v", err)
 		}
