@@ -28,7 +28,7 @@ type Config struct {
 	PollInterval time.Duration `env:"POLL_INTERVAL"`
 	// ReportInterval - интервал между отправки метрик (flag: r; default: 2s)
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
-	// PublicKeyRSA - ключ для подписи сообщений (flag: crypto-key)
+	// PublicKeyRSA - публичный RSA ключ (flag: crypto-key)
 	PublicKeyRSA string `env:"CRYPTO_KEY"`
 	// SignKey - ключ для подписи сообщений (flag: k)
 	SignKey string `env:"KEY"`

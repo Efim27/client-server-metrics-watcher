@@ -2,11 +2,14 @@ package server
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
 	"io/fs"
 	"log"
 	"net/http"
 	"time"
+
+	handlerRSA "metrics/internal/rsa"
 
 	_ "net/http/pprof"
 
@@ -18,18 +21,28 @@ import (
 )
 
 type Server struct {
-	storage   storage.MetricStorager
-	chiRouter chi.Router
-	config    config.Config
-	startTime time.Time
+	storage       storage.MetricStorager
+	chiRouter     chi.Router
+	config        config.Config
+	privateKeyRSA *rsa.PrivateKey
+	startTime     time.Time
 }
 
-func NewServer(config config.Config) *Server {
-	log.Println(config)
-
-	return &Server{
+func NewServer(config config.Config) (server *Server) {
+	var err error
+	server = &Server{
 		config: config,
 	}
+	log.Println(server.config)
+
+	if config.PrivateKeyRSA != "" {
+		server.privateKeyRSA, err = handlerRSA.ParsePrivateKeyRSA(config.PrivateKeyRSA)
+	}
+	if err != nil {
+		log.Fatal("Parsing RSA key error")
+	}
+
+	return
 }
 
 func (server *Server) selectStorage() storage.MetricStorager {
@@ -66,6 +79,11 @@ func (server *Server) initRouter() {
 	router.Use(chimiddleware.Logger)
 	router.Use(chimiddleware.Recoverer)
 	router.Use(middleware.GzipHandle)
+
+	if server.privateKeyRSA != nil {
+		RSAHandle := middleware.NewRSAHandle(server.privateKeyRSA)
+		router.Use(RSAHandle)
+	}
 
 	router.Get("/", server.PrintAllMetricStatic)
 	router.Get("/ping", server.PingGetJSON)

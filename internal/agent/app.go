@@ -42,7 +42,7 @@ func mustInitLogger(app *AppHTTP) {
 func NewAppHTTP(config config.Config) *AppHTTP {
 	app := &AppHTTP{}
 	app.config = config
-	app.metricsUplader = metricsuploader.NewMetricsUploader(app.config.HTTPClientConnection, app.config.SignKey)
+	app.metricsUplader = metricsuploader.NewMetricsUploader(app.config.HTTPClientConnection, app.config.SignKey, app.config.PublicKeyRSA)
 
 	mustInitLogger(app)
 

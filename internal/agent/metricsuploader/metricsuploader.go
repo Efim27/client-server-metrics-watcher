@@ -72,7 +72,7 @@ func NewMetricsUploader(config config.HTTPClientConfig, signKey, publicKeyRSA st
 		var err error
 		metricsUplader.publicKeyRSA, err = handlerRSA.ParsePublicKeyRSA(publicKeyRSA)
 		if err != nil {
-			log.Println("Parsing public key failed, RSA disabled")
+			log.Fatal("Parsing public key failed, RSA disabled")
 		}
 	}
 

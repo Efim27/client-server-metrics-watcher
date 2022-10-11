@@ -28,6 +28,8 @@ type Config struct {
 	ProfilingAddr string `env:"PROF_ADDRESS"`
 	// TemplatesAbsPath - абсолютный путь до шаблонов HTML (default: ./templates)
 	TemplatesAbsPath string `env:"TEMPLATES_ABS_PATH"`
+	// PrivateKeyRSA - приватный RSA ключ (flag: crypto-key)
+	PrivateKeyRSA string `env:"CRYPTO_KEY"`
 	// SignKey - ключ для подписи сообщений (flag: k)
 	SignKey string `env:"KEY"`
 	// DebugMode - debug мод (flag: debug; default: false)
@@ -60,6 +62,7 @@ func (config *Config) parseEnv() error {
 func (config *Config) parseFlags() {
 	flag.StringVar(&config.ServerAddr, "a", config.ServerAddr, "server address (host:port)")
 	flag.StringVar(&config.ProfilingAddr, "pa", config.ProfilingAddr, "profiling address (host:port)")
+	flag.StringVar(&config.PrivateKeyRSA, "crypto-key", config.PrivateKeyRSA, "RSA private key")
 	flag.StringVar(&config.SignKey, "k", config.SignKey, "sign key")
 	flag.BoolVar(&config.DebugMode, "debug", config.DebugMode, "debug mode")
 
