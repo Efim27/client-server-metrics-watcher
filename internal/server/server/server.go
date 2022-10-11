@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"log"
 	"net/http"
 	"time"
@@ -83,7 +85,7 @@ func (server *Server) initRouter() {
 	server.chiRouter = router
 }
 
-func (server *Server) Run(ctx context.Context) {
+func (server *Server) Run(ctx context.Context) (err error) {
 	server.initStorage()
 	defer server.storage.Close()
 
@@ -94,17 +96,20 @@ func (server *Server) Run(ctx context.Context) {
 	}
 
 	go func() {
-		err := serverHTTP.ListenAndServeTLS("./keysSSL/server.crt", "./keysSSL/server.key")
-		if err != nil {
-			log.Println(err)
+		<-ctx.Done()
+
+		if err = serverHTTP.Shutdown(context.Background()); err != nil {
+			log.Printf("HTTP server shutdown error: %v", err)
 		}
 	}()
 
-	<-ctx.Done()
-	err := serverHTTP.Close()
-	if err != nil {
-		log.Println(err)
+	err = serverHTTP.ListenAndServeTLS("./keysSSL/server.crt", "./keysSSL/server.key")
+	if errors.Is(err, fs.ErrNotExist) {
+		log.Println("SSL keys not found, using HTTP")
+		err = serverHTTP.ListenAndServe()
 	}
+
+	return
 }
 
 func (server *Server) Config() (config config.Config) {

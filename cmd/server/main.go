@@ -34,5 +34,8 @@ func main() {
 		go Profiling(appServer.Config().ProfilingAddr)
 	}
 
-	appServer.Run(ctx)
+	err := appServer.Run(ctx)
+	if err != nil {
+		log.Println(err)
+	}
 }
