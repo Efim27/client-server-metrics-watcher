@@ -2,6 +2,7 @@
 package metricsuploader
 
 import (
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
@@ -17,14 +18,16 @@ import (
 	"golang.org/x/sync/errgroup"
 	"metrics/internal/agent/config"
 	"metrics/internal/agent/statsreader"
+	handlerRSA "metrics/internal/rsa"
 	"metrics/internal/server/storage"
 )
 
 type MetricsUplader struct {
-	client   *resty.Client
-	config   config.HTTPClientConfig
-	protocol string // http/https
-	signKey  string
+	client       *resty.Client
+	config       config.HTTPClientConfig
+	publicKeyRSA *rsa.PublicKey
+	protocol     string // http/https
+	signKey      string
 }
 
 func newMetricValue(mtype string, value string) (storage.MetricValue, error) {
@@ -52,7 +55,7 @@ func newMetricValue(mtype string, value string) (storage.MetricValue, error) {
 	return mValue, nil
 }
 
-func NewMetricsUploader(config config.HTTPClientConfig, signKey string) *MetricsUplader {
+func NewMetricsUploader(config config.HTTPClientConfig, signKey, publicKeyRSA string) *MetricsUplader {
 	var metricsUplader MetricsUplader
 	metricsUplader.config = config
 	metricsUplader.signKey = signKey
@@ -64,6 +67,14 @@ func NewMetricsUploader(config config.HTTPClientConfig, signKey string) *Metrics
 		SetRetryWaitTime(metricsUplader.config.RetryWaitTime).
 		SetRetryMaxWaitTime(metricsUplader.config.RetryMaxWaitTime)
 	metricsUplader.client = client
+
+	if publicKeyRSA != "" {
+		var err error
+		metricsUplader.publicKeyRSA, err = handlerRSA.ParsePublicKeyRSA(publicKeyRSA)
+		if err != nil {
+			log.Println("Parsing public key failed, RSA disabled")
+		}
+	}
 
 	if metricsUplader.config.IsEnabledHTTP {
 		err := metricsUplader.addCertCA()
@@ -96,6 +107,8 @@ func (metricsUplader *MetricsUplader) addCertCA() (err error) {
 	return
 }
 
+// oneStatUploadJSON - отправка 1 метрики.
+// Deprecated: используйте MetricsUploadBatch
 func (metricsUplader *MetricsUplader) oneStatUpload(statType string, statName string, statValue string) error {
 	resp, err := metricsUplader.client.R().
 		SetPathParams(map[string]string{
@@ -118,6 +131,8 @@ func (metricsUplader *MetricsUplader) oneStatUpload(statType string, statName st
 	return nil
 }
 
+// oneStatUploadJSON - отправка 1 метрики в формате JSON.
+// Deprecated: используйте MetricsUploadBatch
 func (metricsUplader *MetricsUplader) oneStatUploadJSON(mType string, name string, value string) error {
 	metricValue, err := newMetricValue(mType, value)
 	if err != nil {
@@ -258,6 +273,10 @@ func (metricsUplader *MetricsUplader) MetricsUploadBatch(metricsDump statsreader
 	statJSON, err := json.Marshal(MetricValueBatch)
 	if err != nil {
 		return err
+	}
+
+	if metricsUplader.publicKeyRSA != nil {
+		statJSON = handlerRSA.EncryptWithPublicKey(statJSON, metricsUplader.publicKeyRSA)
 	}
 
 	metricsUplader.client.SetTransport(&http.Transport{})
