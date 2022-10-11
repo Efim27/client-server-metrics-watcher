@@ -18,6 +18,8 @@ type HTTPClientConfig struct {
 	RetryMaxWaitTime time.Duration `env:"RETRY_CONN_MAX_WAIT_TIME"`
 	// ServerAddr - адрес сервера (default: 127.0.0.1:8080)
 	ServerAddr string `env:"ADDRESS"`
+	// isEnabledHTTP - протокол HTTPS если true, иначе HTTP (default: true)
+	IsEnabledHTTP bool `env:"IS_ENABLED_HTTPS"`
 }
 
 // Config используется для хранения конфигурации агента.

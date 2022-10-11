@@ -2,10 +2,15 @@
 package metricsuploader
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"strconv"
 
 	"github.com/go-resty/resty/v2"
@@ -16,9 +21,10 @@ import (
 )
 
 type MetricsUplader struct {
-	client  *resty.Client
-	config  config.HTTPClientConfig
-	signKey string
+	client   *resty.Client
+	config   config.HTTPClientConfig
+	protocol string // http/https
+	signKey  string
 }
 
 func newMetricValue(mtype string, value string) (storage.MetricValue, error) {
@@ -50,6 +56,7 @@ func NewMetricsUploader(config config.HTTPClientConfig, signKey string) *Metrics
 	var metricsUplader MetricsUplader
 	metricsUplader.config = config
 	metricsUplader.signKey = signKey
+	metricsUplader.protocol = "http"
 	client := resty.New()
 
 	client.
@@ -58,19 +65,48 @@ func NewMetricsUploader(config config.HTTPClientConfig, signKey string) *Metrics
 		SetRetryMaxWaitTime(metricsUplader.config.RetryMaxWaitTime)
 	metricsUplader.client = client
 
+	if metricsUplader.config.IsEnabledHTTP {
+		err := metricsUplader.addCertCA()
+		if err != nil {
+			log.Println("Error while adding CA: ", err)
+			return &metricsUplader
+		}
+
+		metricsUplader.protocol = "https"
+	}
+
 	return &metricsUplader
+}
+
+func (metricsUplader *MetricsUplader) addCertCA() (err error) {
+	caCert, err := ioutil.ReadFile("./keysSSL/server.crt")
+	if err != nil {
+		return
+	}
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	metricsUplader.client.SetTransport(&http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs: caCertPool,
+		},
+	})
+
+	return
 }
 
 func (metricsUplader *MetricsUplader) oneStatUpload(statType string, statName string, statValue string) error {
 	resp, err := metricsUplader.client.R().
 		SetPathParams(map[string]string{
-			"addr":  metricsUplader.config.ServerAddr,
-			"type":  statType,
-			"name":  statName,
-			"value": statValue,
+			"addr":     metricsUplader.config.ServerAddr,
+			"protocol": metricsUplader.protocol,
+			"type":     statType,
+			"name":     statName,
+			"value":    statValue,
 		}).
 		SetHeader("Content-Type", "text/plain").
-		Post("http://{addr}/update/{type}/{name}/{value}")
+		Post("{protocol}://{addr}/update/{type}/{name}/{value}")
 
 	if err != nil {
 		return err
@@ -111,9 +147,10 @@ func (metricsUplader *MetricsUplader) oneStatUploadJSON(mType string, name strin
 		SetHeader("Content-Type", "application/json").
 		SetBody(string(statJSON)).
 		SetPathParams(map[string]string{
-			"addr": metricsUplader.config.ServerAddr,
+			"addr":     metricsUplader.config.ServerAddr,
+			"protocol": metricsUplader.protocol,
 		}).
-		Post("http://{addr}/update/")
+		Post("{protocol}://{addr}/update/")
 
 	if err != nil {
 		return err
@@ -223,13 +260,15 @@ func (metricsUplader *MetricsUplader) MetricsUploadBatch(metricsDump statsreader
 		return err
 	}
 
+	metricsUplader.client.SetTransport(&http.Transport{})
 	resp, err := metricsUplader.client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(string(statJSON)).
 		SetPathParams(map[string]string{
-			"addr": metricsUplader.config.ServerAddr,
+			"addr":     metricsUplader.config.ServerAddr,
+			"protocol": metricsUplader.protocol,
 		}).
-		Post("http://{addr}/updates/")
+		Post("{protocol}://{addr}/updates/")
 
 	if err != nil {
 		return err
