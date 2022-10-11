@@ -76,7 +76,6 @@ func (config *Config) parseConfig(flagConfigPath, flagConfigPathAlias *string) {
 	}
 
 	file, err := os.OpenFile(configPath, os.O_RDONLY|os.O_CREATE, 0777)
-	defer file.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -84,6 +83,11 @@ func (config *Config) parseConfig(flagConfigPath, flagConfigPathAlias *string) {
 	err = json.NewDecoder(file).Decode(&config)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		log.Println(err)
 	}
 }
 
