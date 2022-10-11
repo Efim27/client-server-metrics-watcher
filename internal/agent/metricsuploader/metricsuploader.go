@@ -76,7 +76,7 @@ func NewMetricsUploader(config config.HTTPClientConfig, signKey, publicKeyRSA st
 		}
 	}
 
-	if metricsUplader.config.IsEnabledHTTP {
+	if metricsUplader.config.IsEnabledHTTPS {
 		err := metricsUplader.addCertCA()
 		if err != nil {
 			log.Println("Error while adding CA: ", err)
