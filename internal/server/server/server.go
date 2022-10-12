@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	handlerRSA "metrics/internal/rsa"
@@ -113,8 +114,14 @@ func (server *Server) Run(ctx context.Context) (err error) {
 		Handler: server.chiRouter,
 	}
 
+	eventServerStopped := sync.WaitGroup{}
+	eventServerStopped.Add(1)
 	go func() {
 		<-ctx.Done()
+
+		if err = serverHTTP.Shutdown(context.Background()); err != nil {
+			log.Printf("HTTP server shutdown error: %v", err)
+		}
 
 		if server.config.Store.Interval != storage.SyncUploadSymbol {
 			err = server.storage.Save()
@@ -123,15 +130,18 @@ func (server *Server) Run(ctx context.Context) (err error) {
 			}
 		}
 
-		if err = serverHTTP.Shutdown(context.Background()); err != nil {
-			log.Printf("HTTP server shutdown error: %v", err)
-		}
+		eventServerStopped.Done()
 	}()
 
 	err = serverHTTP.ListenAndServeTLS("./keysSSL/server.crt", "./keysSSL/server.key")
 	if errors.Is(err, fs.ErrNotExist) {
 		log.Println("SSL keys not found, using HTTP")
 		err = serverHTTP.ListenAndServe()
+	}
+	if errors.Is(err, http.ErrServerClosed) {
+		log.Println("Server stopping...")
+		eventServerStopped.Wait()
+		log.Println("Server stopped successfully")
 	}
 
 	return
