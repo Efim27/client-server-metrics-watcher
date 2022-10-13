@@ -2,7 +2,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"metrics/internal/agent"
 	"metrics/internal/agent/config"
@@ -35,11 +39,14 @@ var buildCommit = "N/A"
 // @Tag.description "Группа эндпоинтов со статикой"
 
 func main() {
+	ctx, ctxCancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer ctxCancel()
+
 	fmt.Printf("Build version: %s\n", buildVersion)
 	fmt.Printf("Build date: %s\n", buildDate)
 	fmt.Printf("Build commit: %s\n", buildCommit)
 
 	appConfig := config.LoadConfig()
 	app := agent.NewAppHTTP(appConfig)
-	app.Run()
+	app.Run(ctx)
 }

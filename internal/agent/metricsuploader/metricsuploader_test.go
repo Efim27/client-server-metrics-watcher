@@ -27,7 +27,7 @@ func (suite *UploaderTestingSuite) SetupSuite() {
 	go serverAPI.Run(suite.serverCtx)
 
 	agentConfig := config.LoadConfig()
-	suite.metricsUploader = NewMetricsUploader(agentConfig.HTTPClientConnection, "")
+	suite.metricsUploader = NewMetricsUploader(agentConfig.HTTPClientConnection, "", "")
 }
 
 func (suite *UploaderTestingSuite) TearDownSuite() {
@@ -85,7 +85,7 @@ func BenchmarkUploader(b *testing.B) {
 
 	metricsUploader := NewMetricsUploader(config.HTTPClientConfig{
 		ServerAddr: "127.0.0.1:8080",
-	}, "")
+	}, "", "")
 
 	b.Run("sync", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {

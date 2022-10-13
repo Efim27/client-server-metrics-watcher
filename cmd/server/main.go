@@ -7,6 +7,9 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"metrics/internal/server/config"
 	"metrics/internal/server/server"
@@ -21,7 +24,8 @@ func Profiling(addr string) {
 }
 
 func main() {
-	ctx := context.Background()
+	ctx, ctxCancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer ctxCancel()
 
 	fmt.Printf("Build version: %s\n", buildVersion)
 	fmt.Printf("Build date: %s\n", buildDate)
@@ -34,5 +38,8 @@ func main() {
 		go Profiling(appServer.Config().ProfilingAddr)
 	}
 
-	appServer.Run(ctx)
+	err := appServer.Run(ctx)
+	if err != nil {
+		log.Println(err)
+	}
 }

@@ -329,3 +329,7 @@ func (repository DBRepo) InitFromFile() {
 		log.Println(err)
 	}
 }
+
+func (repository DBRepo) Save() error {
+	return nil
+}

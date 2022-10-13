@@ -1,9 +1,9 @@
 package agent
 
 import (
+	"context"
 	"os"
 	"sync"
-	"syscall"
 	"time"
 
 	"go.uber.org/zap"
@@ -42,7 +42,7 @@ func mustInitLogger(app *AppHTTP) {
 func NewAppHTTP(config config.Config) *AppHTTP {
 	app := &AppHTTP{}
 	app.config = config
-	app.metricsUplader = metricsuploader.NewMetricsUploader(app.config.HTTPClientConnection, app.config.SignKey)
+	app.metricsUplader = metricsuploader.NewMetricsUploader(app.config.HTTPClientConnection, app.config.SignKey, app.config.PublicKeyRSA)
 
 	mustInitLogger(app)
 
@@ -77,21 +77,7 @@ func uploadMetrics(app *AppHTTP, metricsDump *statsreader.MetricsDump, wgRefresh
 	}()
 }
 
-func handleSignalOS(app *AppHTTP, osSignal os.Signal) {
-	switch osSignal {
-	case syscall.SIGTERM:
-		app.logger.Info("syscall", zap.String("syscall", "SIGTERM"))
-	case syscall.SIGINT:
-		app.logger.Info("syscall", zap.String("syscall", "SIGINT"))
-	case syscall.SIGQUIT:
-		app.logger.Info("syscall", zap.String("syscall", "SIGQUIT"))
-	default:
-		app.Stop()
-	}
-}
-
-func (app *AppHTTP) Run() {
-	signalChanel := make(chan os.Signal, 1)
+func (app *AppHTTP) Run(ctx context.Context) {
 	metricsDump, err := statsreader.NewMetricsDump()
 	if err != nil {
 		app.logger.Error("cant init metrics handler", zap.Error(err))
@@ -113,8 +99,12 @@ func (app *AppHTTP) Run() {
 		case <-tickerStatisticsUpload.C:
 			app.logger.Info("upload metrics")
 			uploadMetrics(app, metricsDump, &wgRefresh)
-		case osSignal := <-signalChanel:
-			handleSignalOS(app, osSignal)
+		case <-ctx.Done():
+			app.logger.Info("upload metrics")
+			uploadMetrics(app, metricsDump, &wgRefresh)
+			wgRefresh.Wait()
+
+			app.Stop()
 		}
 	}
 }
