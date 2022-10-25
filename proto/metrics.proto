@@ -4,19 +4,14 @@ package metrics;
 
 option go_package = "metrics/proto";
 
-enum ResponseStatus {
-  OK = 0;
-  ERROR = 1;
-}
-
 message MetricGauge {
   string id = 1;
-  double delta = 2;
+  double value = 2;
 }
 
 message MetricCounter {
   string id = 1;
-  int64 value = 2;
+  int64 delta = 2;
 }
 
 message Metric {
@@ -30,10 +25,9 @@ message UpdateMetricsRequest {
   repeated Metric metrics = 1;
 }
 
-message UpdateMetricsResponse {
-  ResponseStatus status = 1;
+message Empty {
 }
 
 service Metrics {
-  rpc UpdateMetrics(UpdateMetricsRequest) returns (UpdateMetricsResponse);
+  rpc UpdateMetrics(UpdateMetricsRequest) returns (Empty);
 }
