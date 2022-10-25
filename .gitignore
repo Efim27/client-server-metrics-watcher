@@ -27,3 +27,6 @@ vendor/
 # SSL keys
 *.crt
 *.key
+
+# proto
+/proto/*.pb.go
