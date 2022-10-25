@@ -6,11 +6,14 @@ import (
 	"errors"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"time"
 
+	"google.golang.org/grpc"
 	handlerRSA "metrics/internal/rsa"
+	grpcServices "metrics/internal/server/grpc"
 
 	_ "net/http/pprof"
 
@@ -19,6 +22,7 @@ import (
 	"metrics/internal/server/config"
 	"metrics/internal/server/middleware"
 	"metrics/internal/server/storage"
+	pb "metrics/proto"
 )
 
 type Server struct {
@@ -27,12 +31,15 @@ type Server struct {
 	config        config.Config
 	privateKeyRSA *rsa.PrivateKey
 	startTime     time.Time
+	serverGRPC    *grpc.Server
 }
 
 func NewServer(config config.Config) (server *Server) {
 	var err error
+
 	server = &Server{
-		config: config,
+		config:     config,
+		serverGRPC: grpc.NewServer(),
 	}
 	log.Println(server.config)
 
@@ -109,6 +116,24 @@ func (server *Server) initRouter() {
 	server.chiRouter = router
 }
 
+func (server *Server) RunServerGRPC() (err error) {
+	lis, err := net.Listen("tcp", server.config.ServerGRPCAddr)
+	if err != nil {
+		return
+	}
+
+	pb.RegisterMetricsServer(server.serverGRPC, grpcServices.NewMetricsService(server.storage))
+
+	go func() {
+		err = server.serverGRPC.Serve(lis)
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+
+	return
+}
+
 func (server *Server) Run(ctx context.Context) (err error) {
 	server.initStorage()
 	defer server.storage.Close()
@@ -127,6 +152,7 @@ func (server *Server) Run(ctx context.Context) (err error) {
 		if err = serverHTTP.Shutdown(context.Background()); err != nil {
 			log.Printf("HTTP server shutdown error: %v", err)
 		}
+		server.serverGRPC.GracefulStop()
 
 		if server.config.Store.Interval != storage.SyncUploadSymbol {
 			err = server.storage.Save()
@@ -137,6 +163,13 @@ func (server *Server) Run(ctx context.Context) (err error) {
 
 		eventServerStopped.Done()
 	}()
+
+	if server.config.ServerGRPCAddr != "" {
+		err = server.RunServerGRPC()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	err = serverHTTP.ListenAndServeTLS("./keysSSL/server.crt", "./keysSSL/server.key")
 	if errors.Is(err, fs.ErrNotExist) {
