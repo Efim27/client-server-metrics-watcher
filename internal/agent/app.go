@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -14,11 +15,12 @@ import (
 )
 
 type AppHTTP struct {
-	isRun          bool
-	logFile        *os.File
-	logger         *zap.Logger
-	metricsUplader *metricsuploader.MetricsUplader
-	config         config.Config
+	isRun               bool
+	logFile             *os.File
+	logger              *zap.Logger
+	metricsUplader      *metricsuploader.MetricsUplader
+	metricsUploaderGRPC *metricsuploader.MetricsUploaderGRPC
+	config              config.Config
 }
 
 func mustInitLogger(app *AppHTTP) {
@@ -43,6 +45,15 @@ func NewAppHTTP(config config.Config) *AppHTTP {
 	app := &AppHTTP{}
 	app.config = config
 	app.metricsUplader = metricsuploader.NewMetricsUploader(app.config.HTTPClientConnection, app.config.SignKey, app.config.PublicKeyRSA)
+
+	if config.ServerGRPCAddr != "" {
+		var err error
+		app.metricsUploaderGRPC, err = metricsuploader.NewMetricsUploaderGRPC(app.config.ServerGRPCAddr)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	mustInitLogger(app)
 
@@ -70,6 +81,11 @@ func uploadMetrics(app *AppHTTP, metricsDump *statsreader.MetricsDump, wgRefresh
 	wgRefresh.Wait()
 
 	go func() {
+		if app.metricsUploaderGRPC != nil {
+			log.Println(app.metricsUploaderGRPC.Upload(*metricsDump))
+			return
+		}
+
 		err := app.metricsUplader.MetricsUploadBatch(*metricsDump)
 		if err != nil {
 			app.logger.Error("cant upload metrics", zap.Error(err))
