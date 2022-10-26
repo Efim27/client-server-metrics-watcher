@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"testing"
 
 	_ "github.com/lib/pq"
@@ -18,6 +19,8 @@ import (
 	"metrics/internal/server/config"
 )
 
+const TempRepoFilePath = "tempRepoFile"
+
 type MetricsDBRepoSuite struct {
 	suite.Suite
 	metricsRepo        *DBRepo
@@ -25,6 +28,7 @@ type MetricsDBRepoSuite struct {
 	cleaner            dbcleaner.DbCleaner
 	testingContainerDB *dockertest.Resource
 	testingPoolDB      *dockertest.Pool
+	repoFile           *os.File
 }
 
 func (suite *MetricsDBRepoSuite) SetupSuite() {
@@ -61,6 +65,7 @@ func (suite *MetricsDBRepoSuite) SetupSuite() {
 	var metricsRepo DBRepo
 	err = suite.testingPoolDB.Retry(func() error {
 		metricsRepo, err = NewDBRepo(config.StoreConfig{
+			File:        TempRepoFilePath,
 			DatabaseDSN: DSN,
 		})
 		if err != nil {
@@ -75,8 +80,12 @@ func (suite *MetricsDBRepoSuite) SetupSuite() {
 	suite.metricsRepo = &metricsRepo
 	suite.db = metricsRepo.DB()
 
-	err = metricsRepo.InitTables()
+	err = suite.metricsRepo.InitTables()
 	suite.NoError(err)
+
+	suite.repoFile, err = os.OpenFile(TempRepoFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	suite.NoError(err)
+	suite.metricsRepo.InitFromFile()
 
 	cleanerEngine := engine.NewPostgresEngine(DSN)
 	suite.cleaner = dbcleaner.New()
@@ -91,10 +100,18 @@ func (suite *MetricsDBRepoSuite) TearDownSuite() {
 		}
 	}()
 
-	err := suite.metricsRepo.Close()
+	err := suite.metricsRepo.Save()
+	suite.NoError(err)
+
+	err = suite.metricsRepo.Close()
 	suite.NoError(err)
 
 	err = suite.cleaner.Close()
+	suite.NoError(err)
+
+	err = suite.repoFile.Close()
+	suite.NoError(err)
+	err = os.Remove(TempRepoFilePath)
 	suite.NoError(err)
 }
 
@@ -119,6 +136,9 @@ func (suite *MetricsDBRepoSuite) TestDBRepo_ReadEmpty() {
 
 	_, err = suite.metricsRepo.Read("PollCount", MeticTypeCounter)
 	suite.Error(err)
+
+	_, err = suite.metricsRepo.Read("gauge", MeticTypeGauge)
+	suite.Error(err)
 }
 
 func (suite *MetricsDBRepoSuite) TestDBRepo_ReadWrite() {
@@ -132,9 +152,61 @@ func (suite *MetricsDBRepoSuite) TestDBRepo_ReadWrite() {
 	})
 	suite.NoError(err)
 
-	metricValue, err := suite.metricsRepo.Read("PollCount", MeticTypeCounter)
+	var metricGauge1 float64 = 27.1
+	err = suite.metricsRepo.Update("Gauge", MetricValue{
+		MType: MeticTypeGauge,
+		Value: &metricGauge1,
+	})
 	suite.NoError(err)
-	suite.EqualValues(metricValue1, *metricValue.Delta)
+
+	metricValueCounter, err := suite.metricsRepo.Read("PollCount", MeticTypeCounter)
+	suite.NoError(err)
+	suite.EqualValues(metricValue1, *metricValueCounter.Delta)
+
+	metricValueGauge, err := suite.metricsRepo.Read("Gauge", MeticTypeGauge)
+	suite.NoError(err)
+	suite.EqualValues(metricGauge1, *metricValueGauge.Value)
+
+	metricValueCounter, err = suite.metricsRepo.readCounter("PollCount")
+	suite.NoError(err)
+	suite.EqualValues(metricValue1, *metricValueCounter.Delta)
+
+	metricValueGauge, err = suite.metricsRepo.Read("Gauge", MeticTypeGauge)
+	suite.NoError(err)
+	suite.EqualValues(metricGauge1, *metricValueGauge.Value)
+}
+
+func (suite *MetricsDBRepoSuite) TestDBRepo_ReadWriteMany() {
+	err := suite.metricsRepo.Ping()
+	suite.NoError(err)
+
+	var metricValueRaw1 int64 = 27
+	metricValue1 := MetricValue{
+		MType: MeticTypeCounter,
+		Delta: &metricValueRaw1,
+	}
+
+	var metricValueRaw2 float64 = 29.2
+	metricGauge1 := MetricValue{
+		MType: MeticTypeGauge,
+		Value: &metricValueRaw2,
+	}
+
+	repoMetricMap := MetricMap{"Counter1": metricValue1, "Gauge1": metricGauge1}
+	err = suite.metricsRepo.UpdateMany(repoMetricMap)
+	suite.NoError(err)
+
+	repoCounterMap, err := suite.metricsRepo.readAllCounter()
+	suite.NoError(err)
+	suite.EqualValues(MetricMap{"Counter1": metricValue1}, repoCounterMap)
+
+	repoGaugeMap, err := suite.metricsRepo.readAllGauge()
+	suite.NoError(err)
+	suite.EqualValues(MetricMap{"Gauge1": metricGauge1}, repoGaugeMap)
+
+	repoAllMetricsMap := suite.metricsRepo.ReadAll()
+	suite.EqualValues(MetricMap{"Counter1": metricValue1}, repoAllMetricsMap[MeticTypeCounter])
+	suite.EqualValues(MetricMap{"Gauge1": metricGauge1}, repoAllMetricsMap[MeticTypeGauge])
 }
 
 func TestUploaderSuite(t *testing.T) {

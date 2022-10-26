@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -174,14 +175,27 @@ func TestMemoryRepoReadAll(t *testing.T) {
 }
 
 func TestMemoryRepoFileIterativeWrite(t *testing.T) {
-	metricsMemoryRepo := NewMetricsMemoryRepo(config.StoreConfig{})
+	metricsMemoryRepo := NewMetricsMemoryRepo(config.StoreConfig{
+		File: TempRepoFilePath,
+	})
 
-	err := metricsMemoryRepo.Ping()
+	repoFile, err := os.OpenFile(TempRepoFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	require.NoError(t, err)
+	metricsMemoryRepo.InitFromFile()
+
+	err = metricsMemoryRepo.Ping()
 	require.NoError(t, err)
 
 	metricsMemoryRepo.IterativeUploadToFile()
+	err = metricsMemoryRepo.Save()
+	require.NoError(t, err)
 
 	err = metricsMemoryRepo.Close()
+	require.NoError(t, err)
+
+	err = repoFile.Close()
+	require.NoError(t, err)
+	err = os.Remove(TempRepoFilePath)
 	require.NoError(t, err)
 }
 
