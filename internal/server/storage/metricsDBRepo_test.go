@@ -19,7 +19,7 @@ import (
 	"metrics/internal/server/config"
 )
 
-const TempRepoFilePath = "tempRepoFile"
+const TempDBRepoFilePath = "tempDBRepoFile"
 
 type MetricsDBRepoSuite struct {
 	suite.Suite
@@ -65,7 +65,7 @@ func (suite *MetricsDBRepoSuite) SetupSuite() {
 	var metricsRepo DBRepo
 	err = suite.testingPoolDB.Retry(func() error {
 		metricsRepo, err = NewDBRepo(config.StoreConfig{
-			File:        TempRepoFilePath,
+			File:        TempDBRepoFilePath,
 			DatabaseDSN: DSN,
 		})
 		if err != nil {
@@ -83,7 +83,7 @@ func (suite *MetricsDBRepoSuite) SetupSuite() {
 	err = suite.metricsRepo.InitTables()
 	suite.NoError(err)
 
-	suite.repoFile, err = os.OpenFile(TempRepoFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	suite.repoFile, err = os.OpenFile(TempDBRepoFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	suite.NoError(err)
 	suite.metricsRepo.InitFromFile()
 
@@ -111,7 +111,7 @@ func (suite *MetricsDBRepoSuite) TearDownSuite() {
 
 	err = suite.repoFile.Close()
 	suite.NoError(err)
-	err = os.Remove(TempRepoFilePath)
+	err = os.Remove(TempDBRepoFilePath)
 	suite.NoError(err)
 }
 

@@ -11,6 +11,8 @@ import (
 	"metrics/internal/server/config"
 )
 
+const TempMemoryRepoFilePath = "tempMemoryRepoFilePath"
+
 func ExampleMemoryRepo() {
 	memoryRepo, err := NewMemoryRepo()
 	if err != nil {
@@ -176,10 +178,10 @@ func TestMemoryRepoReadAll(t *testing.T) {
 
 func TestMemoryRepoFileIterativeWrite(t *testing.T) {
 	metricsMemoryRepo := NewMetricsMemoryRepo(config.StoreConfig{
-		File: TempRepoFilePath,
+		File: TempMemoryRepoFilePath,
 	})
 
-	repoFile, err := os.OpenFile(TempRepoFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	repoFile, err := os.OpenFile(TempMemoryRepoFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	require.NoError(t, err)
 	metricsMemoryRepo.InitFromFile()
 
@@ -195,7 +197,7 @@ func TestMemoryRepoFileIterativeWrite(t *testing.T) {
 
 	err = repoFile.Close()
 	require.NoError(t, err)
-	err = os.Remove(TempRepoFilePath)
+	err = os.Remove(TempMemoryRepoFilePath)
 	require.NoError(t, err)
 }
 
