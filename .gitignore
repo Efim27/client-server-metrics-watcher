@@ -28,5 +28,5 @@ vendor/
 *.crt
 *.key
 
-# proto
-/proto/*.pb.go
+# proto (disabled, becouse of autotests)
+#/proto/*.pb.go
