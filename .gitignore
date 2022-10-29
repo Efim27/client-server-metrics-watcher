@@ -27,3 +27,6 @@ vendor/
 # SSL keys
 *.crt
 *.key
+
+# proto (disabled, becouse of autotests)
+#/proto/*.pb.go

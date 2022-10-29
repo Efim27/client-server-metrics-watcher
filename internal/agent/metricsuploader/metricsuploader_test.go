@@ -9,29 +9,58 @@ import (
 	"metrics/internal/agent/statsreader"
 	serverCfg "metrics/internal/server/config"
 	"metrics/internal/server/server"
+	"metrics/internal/server/storage"
 )
 
 type UploaderTestingSuite struct {
 	suite.Suite
-	serverCtx       context.Context
-	serverCtxCancel context.CancelFunc
-	metricsUploader *MetricsUplader
+	serverCtx           context.Context
+	serverCtxCancel     context.CancelFunc
+	metricsUploader     *MetricsUplader
+	metricsUploaderGRPC *MetricsUploaderGRPC
 }
 
 func (suite *UploaderTestingSuite) SetupSuite() {
 	suite.serverCtx, suite.serverCtxCancel = context.WithCancel(context.Background())
+	const ServerGRPCAddr = "127.0.0.1:50051"
 	serverAPI := server.NewServer(serverCfg.Config{
-		ServerAddr: "127.0.0.1:8080",
+		ServerAddr:     "127.0.0.1:8080",
+		ServerGRPCAddr: ServerGRPCAddr,
 	})
 
 	go serverAPI.Run(suite.serverCtx)
 
 	agentConfig := config.LoadConfig()
 	suite.metricsUploader = NewMetricsUploader(agentConfig.HTTPClientConnection, "", "")
+
+	clientIP, err := suite.metricsUploader.IP()
+	suite.NoError(err)
+	suite.NotEmpty(clientIP)
+
+	suite.metricsUploaderGRPC, err = NewMetricsUploaderGRPC(ServerGRPCAddr)
+	suite.NoError(err)
 }
 
 func (suite *UploaderTestingSuite) TearDownSuite() {
 	suite.serverCtxCancel()
+}
+
+func (suite *UploaderTestingSuite) TestUploadGRPC() {
+	metricsDump, err := statsreader.NewMetricsDump()
+	suite.NoError(err)
+	metricsDump.Refresh()
+
+	suite.NotNil(metricsDump)
+	err = suite.metricsUploaderGRPC.Upload(*metricsDump)
+	suite.NoError(err)
+}
+
+func (suite *UploaderTestingSuite) TestUploadOne() {
+	err := suite.metricsUploader.oneStatUpload(storage.MeticTypeCounter, "Counter1", "27")
+	suite.NoError(err)
+
+	err = suite.metricsUploader.oneStatUpload(storage.MeticTypeGauge, "Gauge1", "29.1")
+	suite.NoError(err)
 }
 
 func (suite *UploaderTestingSuite) TestUploadJSON() {

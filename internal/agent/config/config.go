@@ -37,7 +37,9 @@ type Config struct {
 	// LogFile - лог файл (flag: l)
 	LogFile string `env:"LOG_FILE" json:"log_file,omitempty"`
 	// DebugMode - debug мод (flag: d)
-	DebugMode            bool `env:"DEBUG" json:"debug,omitempty"`
+	DebugMode bool `env:"DEBUG" json:"debug,omitempty"`
+	// ServerGRPCAddr - адрес gRPC сервера (если значение установлено, то вместо HTTP будет использоваться gRPC)
+	ServerGRPCAddr       string `env:"ADDRESS_GRPC" json:"address_grpc,omitempty"`
 	HTTPClientConnection HTTPClientConfig
 }
 

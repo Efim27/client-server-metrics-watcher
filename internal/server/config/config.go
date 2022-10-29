@@ -26,6 +26,10 @@ type StoreConfig struct {
 type Config struct {
 	// ServerAddr - адрес сервера (flag: a; default: 127.0.0.1:8080)
 	ServerAddr string `env:"ADDRESS" json:"address,omitempty"`
+	// ServerGRPCAddr - адрес gRPC сервера (default: 127.0.0.1:50051)
+	ServerGRPCAddr string `env:"ADDRESS_GRPC" json:"address_grpc,omitempty"`
+	// TrustedSubNet - строковое представление доверенной сети
+	TrustedSubNet string `env:"TRUSTED_SUBNET" json:"trusted_subnet,omitempty"`
 	// ProfilingAddr -  адрес WEB сервера профилировщика, не работает если пустое значение (flag: pa; default: 127.0.0.1:8090)
 	ProfilingAddr string `env:"PROF_ADDRESS" json:"profiling_addr,omitempty"`
 	// TemplatesAbsPath - абсолютный путь до шаблонов HTML (default: ./templates)
@@ -49,6 +53,7 @@ func newConfig() *Config {
 // initDefaultValues - значения конфига по умолчанию.
 func (config *Config) initDefaultValues() {
 	config.ServerAddr = "127.0.0.1:8080"
+	config.ServerGRPCAddr = "127.0.0.1:50051"
 	config.TemplatesAbsPath = "./templates"
 	config.Store = StoreConfig{
 		Interval: time.Duration(300) * time.Second,
@@ -97,6 +102,7 @@ func (config *Config) parseEnv() error {
 
 func (config *Config) parseFlags() {
 	flag.StringVar(&config.ServerAddr, "a", config.ServerAddr, "server address (host:port)")
+	flag.StringVar(&config.TrustedSubNet, "t", config.TrustedSubNet, "trusted subnet")
 	flag.StringVar(&config.ProfilingAddr, "pa", config.ProfilingAddr, "profiling address (host:port)")
 	flag.StringVar(&config.PrivateKeyRSA, "crypto-key", config.PrivateKeyRSA, "RSA private key")
 	flag.StringVar(&config.SignKey, "k", config.SignKey, "sign key")

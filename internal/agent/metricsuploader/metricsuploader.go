@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/go-resty/resty/v2"
@@ -21,6 +23,8 @@ import (
 	handlerRSA "metrics/internal/rsa"
 	"metrics/internal/server/storage"
 )
+
+var ErrCurrentIPNotFound = errors.New("current IP addr not found")
 
 type MetricsUplader struct {
 	client       *resty.Client
@@ -68,6 +72,12 @@ func NewMetricsUploader(config config.HTTPClientConfig, signKey, publicKeyRSA st
 		SetRetryMaxWaitTime(metricsUplader.config.RetryMaxWaitTime)
 	metricsUplader.client = client
 
+	currentIP, err := metricsUplader.IP()
+	if err != nil {
+		currentIP = ""
+	}
+	client.Header.Add("X-Real-IP", currentIP)
+
 	if publicKeyRSA != "" {
 		var err error
 		metricsUplader.publicKeyRSA, err = handlerRSA.ParsePublicKeyRSA(publicKeyRSA)
@@ -87,6 +97,26 @@ func NewMetricsUploader(config config.HTTPClientConfig, signKey, publicKeyRSA st
 	}
 
 	return &metricsUplader
+}
+
+func (metricsUplader *MetricsUplader) IP() (ip string, err error) {
+	hostName, err := os.Hostname()
+	if err != nil {
+		return
+	}
+
+	addrList, err := net.LookupHost(hostName)
+	if err != nil {
+		return
+	}
+
+	if len(addrList) == 0 {
+		err = ErrCurrentIPNotFound
+		return
+	}
+
+	ip = addrList[0]
+	return
 }
 
 func (metricsUplader *MetricsUplader) addCertCA() (err error) {
